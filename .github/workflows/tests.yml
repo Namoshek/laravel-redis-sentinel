@@ -86,6 +86,7 @@ jobs:
           REDIS_SENTINEL_HOST: redis-sentinel
           REDIS_SENTINEL_PORT: 26379
           REDIS_SENTINEL_SERVICE: mymaster
+          REDIS_SENTINEL_PERSISTENT: '1'
 
       - name: Prepare paths for SonarQube analysis
         if: matrix.php-version == '8.0'
