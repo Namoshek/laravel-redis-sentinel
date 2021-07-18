@@ -79,6 +79,9 @@ jobs:
       - name: Install composer dependencies
         run: composer install --prefer-dist
 
+      - name: Wait a bit until the Redis and Redis Sentinel servers are ready
+        run: sleep 10
+
       - name: Run phpunit tests
         run: composer test
         env:
