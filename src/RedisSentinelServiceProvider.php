@@ -10,8 +10,6 @@ use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 
 /**
  * Registers and boots services of the Laravel Redis Sentinel package.
- *
- * @package Namoshek\Redis\Sentinel
  */
 class RedisSentinelServiceProvider extends ServiceProvider
 {

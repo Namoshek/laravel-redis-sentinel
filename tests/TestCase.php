@@ -9,8 +9,6 @@ namespace Namoshek\Redis\Sentinel\Tests;
 
 /**
  * Base for all unit tests.
- *
- * @package Namoshek\Redis\Sentinel\Tests
  */
 abstract class TestCase extends \Orchestra\Testbench\TestCase
 {

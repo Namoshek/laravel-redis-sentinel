@@ -15,8 +15,6 @@ use RedisSentinel;
 
 /**
  * Allows to connect to a Sentinel driven Redis master using the PhpRedis extension.
- *
- * @package Namoshek\Redis\Sentinel\Connectors
  */
 class PhpRedisSentinelConnector extends PhpRedisConnector
 {
@@ -59,9 +57,9 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
         $master = $sentinel->master($service);
 
         if ($master === false
-            || !is_array($master)
-            || !isset($master['ip'])
-            || !isset($master['port'])
+            || ! is_array($master)
+            || ! isset($master['ip'])
+            || ! isset($master['port'])
         ) {
             throw new RedisException(sprintf("No master found for service '%s'.", $service));
         }
@@ -80,13 +78,13 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
      */
     private function connectToSentinel(array $config): RedisSentinel
     {
-        $host          = $config['host'] ?? '';
-        $port          = $config['port'] ?? 26379;
-        $timeout       = $config['sentinel_timeout'] ?? 0.2;
-        $persistent    = $config['sentinel_persistent'] ?? null;
+        $host = $config['host'] ?? '';
+        $port = $config['port'] ?? 26379;
+        $timeout = $config['sentinel_timeout'] ?? 0.2;
+        $persistent = $config['sentinel_persistent'] ?? null;
         $retryInterval = $config['sentinel_retry_interval'] ?? 0;
-        $readTimeout   = $config['sentinel_read_timeout'] ?? 0;
-        $password      = $config['sentinel_password'] ?? '';
+        $readTimeout = $config['sentinel_read_timeout'] ?? 0;
+        $password = $config['sentinel_password'] ?? '';
 
         if (strlen(trim($host)) === 0) {
             throw new ConfigurationException('No host has been specified for the Redis Sentinel connection.');

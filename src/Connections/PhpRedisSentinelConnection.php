@@ -12,8 +12,6 @@ use RedisException;
 
 /**
  * The connection to Redis after connecting through a Sentinel using the PhpRedis extension.
- *
- * @package Namoshek\Redis\Sentinel\Connections
  */
 class PhpRedisSentinelConnection extends PhpRedisConnection
 {
