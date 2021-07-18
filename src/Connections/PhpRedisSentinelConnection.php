@@ -1,13 +1,16 @@
 <?php
 
+/* @noinspection PhpComposerExtensionStubsInspection */
 /* @noinspection PhpRedundantCatchClauseInspection */
 
 declare(strict_types=1);
 
 namespace Namoshek\Redis\Sentinel\Connections;
 
+use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Illuminate\Support\Str;
+use Redis;
 use RedisException;
 
 /**
@@ -84,7 +87,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      *
      * @throws RedisException
      */
-    public function pipeline(callable $callback = null): \Redis|array
+    public function pipeline(callable $callback = null): Redis|array
     {
         try {
             return parent::pipeline($callback);
@@ -100,7 +103,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      *
      * @throws RedisException
      */
-    public function transaction(callable $callback = null): \Redis|array
+    public function transaction(callable $callback = null): Redis|array
     {
         try {
             return parent::transaction($callback);
@@ -132,7 +135,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      *
      * @throws RedisException
      */
-    public function subscribe($channels, \Closure $callback): void
+    public function subscribe($channels, Closure $callback): void
     {
         try {
             parent::subscribe($channels, $callback);
@@ -148,7 +151,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      *
      * @throws RedisException
      */
-    public function psubscribe($channels, \Closure $callback): void
+    public function psubscribe($channels, Closure $callback): void
     {
         try {
             parent::psubscribe($channels, $callback);

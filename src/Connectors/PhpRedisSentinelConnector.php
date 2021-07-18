@@ -1,5 +1,7 @@
 <?php
 
+/* @noinspection PhpComposerExtensionStubsInspection */
+
 declare(strict_types=1);
 
 namespace Namoshek\Redis\Sentinel\Connectors;
@@ -20,6 +22,8 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
 {
     /**
      * {@inheritdoc}
+     *
+     * @throws RedisException
      */
     public function connect(array $config, array $options): PhpRedisSentinelConnection
     {
@@ -74,7 +78,6 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
      * Connect to the configured Redis Sentinel instance.
      *
      * @throws ConfigurationException
-     * @throws RedisException
      */
     private function connectToSentinel(array $config): RedisSentinel
     {
