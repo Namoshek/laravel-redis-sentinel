@@ -24,7 +24,8 @@ jobs:
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "redis-cli -p 6379 ping"
+          --health-start-period 5s
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -37,6 +38,7 @@ jobs:
           REDIS_SENTINEL_QUORUM: 1
         options: >-
           --health-cmd "redis-cli -p 26379 ping"
+          --health-start-period 5s
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
