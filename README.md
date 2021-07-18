@@ -12,7 +12,7 @@
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=namoshek_laravel-redis-sentinel&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=namoshek_laravel-redis-sentinel)
 [![License](https://poser.pugx.org/namoshek/laravel-redis-sentinel/license)](https://packagist.org/packages/namoshek/laravel-redis-sentinel)
 
-This package provides a Laravel Redis driver which allows to connect to a Redis master through a Redis Sentinel instance.
+This package provides a Laravel Redis driver which allows connecting to a Redis master through a Redis Sentinel instance.
 The package is intended to be used in a Kubernetes environment or similar, where connecting to Redis Sentinels is possible through a load balancer.
 
 This driver is an alternative to [`monospice/laravel-redis-sentinel-drivers`](https://github.com/monospice/laravel-redis-sentinel-drivers).
@@ -39,7 +39,7 @@ The package requires no extra configuration and does therefore not provide an ad
 
 ## Usage
 
-To use the Redis Sentinel driver, the `redis.client` in `config/database.php` needs to be adjusted:
+To use the Redis Sentinel driver, the `redis` section in `config/database.php` needs to be adjusted:
 
 ```php
 'redis' => [
@@ -47,36 +47,33 @@ To use the Redis Sentinel driver, the `redis.client` in `config/database.php` ne
     'client' => env('REDIS_CLIENT', 'phpredis-sentinel'),
 
     'default' => [
-        'host' => env('REDIS_HOST', '127.0.0.1'),
-        'password' => env('REDIS_PASSWORD', null),
-        'port' => env('REDIS_PORT', '6379'),
-        'database' => env('REDIS_DB', '0'),
+        'sentinel_host' => env('REDIS_SENTINEL_HOST', '127.0.0.1'),
+        'sentinel_port' => env('REDIS_SENTINEL_PORT', 26379),
         'sentinel_service' => env('REDIS_SENTINEL_SERVICE', 'mymaster'),
-        'sentinel_timeout' => env('REDIS_SENTINEL_TIMEOUT', 0.2),
-        'sentinel_persistent' => env('REDIS_SENTINEL_PERSISTENT', null),
+        'sentinel_timeout' => env('REDIS_SENTINEL_TIMEOUT', 0),
+        'sentinel_persistent' => env('REDIS_SENTINEL_PERSISTENT'),
         'sentinel_retry_interval' => env('REDIS_SENTINEL_RETRY_INTERVAL', 0),
         'sentinel_read_timeout' => env('REDIS_SENTINEL_READ_TIMEOUT', 0),
-        'sentinel_password' => env('REDIS_SENTINEL_PASSWORD', null),
+        'sentinel_password' => env('REDIS_SENTINEL_PASSWORD'),
+        'password' => env('REDIS_PASSWORD'),
+        'database' => env('REDIS_DB', 0),
     ]
 ]
 ```
 
-Instead of changing the configuration file directly, you can also set `REDIS_CLIENT=phpredis-sentinel` in the environment variables,
-if you are using the default configuration for Redis so far.
+Instead of changing `redis.client` in the configuration file directly, you can also set `REDIS_CLIENT=phpredis-sentinel` in the environment variables.
 
 As you can see, there are also a few new option `sentinel_*` options available for a connection.
 Most of them work very similar to the normal Redis options, except that they are used for the connection to Redis Sentinel.
 Noteworthy is the `sentinel_service`, which represents the instance name of the monitored Redis master.
 
-All other options are the same for the Redis Sentinel driver, except that `url` is not supported.
-Also keep in mind that the `REDIS_PORT` should be the port of your Sentinel, e.g. `26379` which is the default.
-This is because the configuration now defines how we connect to the Sentinel, not Redis directly.
+All other options are the same for the Redis Sentinel driver, except that `url` is not supported and `host` and `port` are ignored.
 
 ### How does it work?
 
 An additional Laravel Redis driver is added (`phpredis-sentinel`), which resolves the currently declared master instance of a replication
 cluster as active Redis instance. Under the hood, this driver relies on the framework driver for [`phpredis/phpredis`](https://github.com/phpredis/phpredis),
-it only wraps the connection part of it and adds some error handling which forces a reconnect in case of a failover.
+it only wraps the connection part of it and adds some error handling which forcefully reconnects in case of a failover.
 
 ## Limitations
 

@@ -39,9 +39,9 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
 
         // Setup configuration for different types of supported databases.
         $app['config']->set('database.redis.default', [
-            'host' => env('REDIS_SENTINEL_HOST'),
-            'port' => (int) env('REDIS_SENTINEL_PORT', 6379),
-            'password' => env('REDIS_PASSWORD'),
+            'sentinel_host' => env('REDIS_SENTINEL_HOST', '127.0.0.1'),
+            'sentinel_port' => (int) env('REDIS_SENTINEL_PORT', 6379),
+            'sentinel_password' => env('REDIS_SENTINEL_PASSWORD'),
             'sentinel_service' => env('REDIS_SENTINEL_SERVICE', 'mymaster'),
         ]);
     }

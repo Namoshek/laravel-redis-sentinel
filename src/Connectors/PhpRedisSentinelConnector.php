@@ -81,8 +81,8 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
      */
     private function connectToSentinel(array $config): RedisSentinel
     {
-        $host = $config['host'] ?? '';
-        $port = $config['port'] ?? 26379;
+        $host = $config['sentinel_host'] ?? '';
+        $port = $config['sentinel_port'] ?? 26379;
         $timeout = $config['sentinel_timeout'] ?? 0.2;
         $persistent = $config['sentinel_persistent'] ?? null;
         $retryInterval = $config['sentinel_retry_interval'] ?? 0;
