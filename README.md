@@ -20,6 +20,9 @@ The primary difference is that this driver supports the [`phpredis/phpredis` PHP
 and has significantly simpler configuration, due to a simpler architecture.
 In detail this means that this package does not override the entire Redis subsystem of Laravel, it only adds an additional driver.
 
+By default, Laravel supports the `predis` and `phpredis` drivers. This package adds a `phpredis-sentinel` driver,
+which is an extension of the `phpredis` driver for Redis Sentinel. An extension for `predis` is currently not available.
+
 ## Installation
 
 You can install the package via composer:
@@ -32,7 +35,7 @@ The service provider which comes with the package is registered automatically.
 
 ## Configuration
 
-The package requires no extra configuration and does therefore provide no additional configuration file.
+The package requires no extra configuration and does therefore not provide an additional configuration file.
 
 ## Usage
 
@@ -44,7 +47,6 @@ To use the Redis Sentinel driver, the `redis.client` in `config/database.php` ne
     'client' => env('REDIS_CLIENT', 'phpredis-sentinel'),
 
     'default' => [
-        'url' => env('REDIS_URL'),
         'host' => env('REDIS_HOST', '127.0.0.1'),
         'password' => env('REDIS_PASSWORD', null),
         'port' => env('REDIS_PORT', '6379'),
@@ -66,8 +68,9 @@ As you can see, there are also a few new option `sentinel_*` options available f
 Most of them work very similar to the normal Redis options, except that they are used for the connection to Redis Sentinel.
 Noteworthy is the `sentinel_service`, which represents the instance name of the monitored Redis master.
 
-All other options are the same for the Redis Sentinel driver. Just keep in mind that the `REDIS_PORT` should be the port of your Sentinel,
-e.g. `26379` which is the default. This is because the configuration now defines how we connect to the Sentinel, not Redis directly.
+All other options are the same for the Redis Sentinel driver, except that `url` is not supported.
+Also keep in mind that the `REDIS_PORT` should be the port of your Sentinel, e.g. `26379` which is the default.
+This is because the configuration now defines how we connect to the Sentinel, not Redis directly.
 
 ### How does it work?
 
