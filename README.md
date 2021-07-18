@@ -1,6 +1,4 @@
-# Laravel Redis Sentinel driver to connect to Redis through Sentinel(s)
-
-:warning: :construction: **This package is currently under development. An initial release will be added soon.** :construction: :warning:
+# Laravel Redis Sentinel driver for `phpredis/phpredis` PHP extension
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/namoshek/laravel-redis-sentinel.svg?style=flat-square)](https://packagist.org/packages/namoshek/laravel-redis-sentinel)
 [![Total Downloads](https://img.shields.io/packagist/dt/namoshek/laravel-redis-sentinel.svg?style=flat-square)](https://packagist.org/packages/namoshek/laravel-redis-sentinel)
@@ -20,8 +18,10 @@ The primary difference is that this driver supports the [`phpredis/phpredis` PHP
 and has significantly simpler configuration, due to a simpler architecture.
 In detail this means that this package does not override the entire Redis subsystem of Laravel, it only adds an additional driver.
 
-By default, Laravel supports the `predis` and `phpredis` drivers. This package adds a `phpredis-sentinel` driver,
-which is an extension of the `phpredis` driver for Redis Sentinel. An extension for `predis` is currently not available.
+By default, Laravel supports the `predis` and `phpredis` drivers. This package adds a third `phpredis-sentinel` driver,
+which is an extension of the `phpredis` driver for Redis Sentinel.
+An extension for `predis` is currently not available and not necessary, since [`predis/predis`](https://github.com/predis/predis) already supports
+connecting to Redis through one or more Sentinels.
 
 ## Installation
 
@@ -63,7 +63,7 @@ To use the Redis Sentinel driver, the `redis` section in `config/database.php` n
 
 Instead of changing `redis.client` in the configuration file directly, you can also set `REDIS_CLIENT=phpredis-sentinel` in the environment variables.
 
-As you can see, there are also a few new option `sentinel_*` options available for a connection.
+As you can see, there are also a few new `sentinel_*` options available for each Redis connection.
 Most of them work very similar to the normal Redis options, except that they are used for the connection to Redis Sentinel.
 Noteworthy is the `sentinel_service`, which represents the instance name of the monitored Redis master.
 
@@ -75,9 +75,8 @@ An additional Laravel Redis driver is added (`phpredis-sentinel`), which resolve
 cluster as active Redis instance. Under the hood, this driver relies on the framework driver for [`phpredis/phpredis`](https://github.com/phpredis/phpredis),
 it only wraps the connection part of it and adds some error handling which forcefully reconnects in case of a failover.
 
-## Limitations
-
-For the moment, this package supports only the [`phpredis/phpredis` PHP extension](https://github.com/phpredis/phpredis).
+Please be aware that this package does not manage load balancing between Sentinels (which is supposed to be done on an infrastructure level)
+and does also not load balance read/write calls to replica/master nodes. All traffic is sent to the currently reported master.
 
 ## Developing
 
