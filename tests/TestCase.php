@@ -43,6 +43,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
             'port' => (int) env('REDIS_SENTINEL_PORT', 6379),
             'password' => env('REDIS_PASSWORD'),
             'sentinel_service' => env('REDIS_SENTINEL_SERVICE', 'mymaster'),
+            'sentinel_timeout' => (float) env('REDIS_SENTINEL_TIMEOUT', 0),
         ]);
     }
 }

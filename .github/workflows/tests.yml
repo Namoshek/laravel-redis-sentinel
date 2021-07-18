@@ -51,20 +51,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ensure Redis Sentinel is reachable
-        uses: docker://bitnami/redis:6.2.4-debian-10-r35
-        with:
-          args: redis-cli -h redis-sentinel -p 26379 ping
-
-      - name: Retrieve master from Redis Sentinel
-        uses: docker://bitnami/redis:6.2.4-debian-10-r35
-        with:
-          args: redis-cli -h redis-sentinel -p 26379 sentinel master mymaster
-
       - name: Setup PHPUnit
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
+          extensions: redis
           tools: phpunit:9.5.0
           coverage: pcov
 
