@@ -19,6 +19,15 @@ jobs:
         php-version: ['8.0']
 
     services:
+      redis:
+        image: bitnami/redis:6.2.4-debian-10-r35
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       redis-sentinel:
         image: bitnami/redis-sentinel:6.2.4-debian-10-r39
         ports:
@@ -27,15 +36,6 @@ jobs:
           REDIS_MASTER_HOST: redis
         options: >-
           --health-cmd "redis-cli -p 26379 ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: bitnami/redis:6.2.4-debian-10-r35
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
