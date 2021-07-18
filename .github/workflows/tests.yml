@@ -23,12 +23,6 @@ jobs:
         image: bitnami/redis:6.2.4-debian-10-r35
         ports:
           - 6379:6379
-        options: >-
-          --health-cmd "redis-cli -p 6379 ping"
-          --health-start-period 5s
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
       redis-sentinel:
         image: bitnami/redis-sentinel:6.2.4-debian-10-r39
         ports:
@@ -36,12 +30,6 @@ jobs:
         env:
           REDIS_MASTER_HOST: redis
           REDIS_SENTINEL_QUORUM: 1
-        options: >-
-          --health-cmd "redis-cli -p 26379 ping"
-          --health-start-period 5s
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v2
