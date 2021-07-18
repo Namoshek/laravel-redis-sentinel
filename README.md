@@ -82,6 +82,14 @@ it only wraps the connection part of it and adds some error handling which force
 
 For the moment, this package supports only the [`phpredis/phpredis` PHP extension](https://github.com/phpredis/phpredis).
 
+## Developing
+
+To run the tests locally, a Redis cluster needs to be running.
+The repository contains a script (thanks to [`monospice/laravel-redis-sentinel-drivers`](https://github.com/monospice/laravel-redis-sentinel-drivers))
+which can be used to start one by running `sh start-redis-cluster.sh`.
+The script requires that Redis is installed on your machine. To install Redis on Ubuntu or Debian,
+you can use `sudo apt update && sudo apt install redis-server`. For other operating systems, please see [redis.io](https://redis.io/).
+
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
