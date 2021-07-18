@@ -96,7 +96,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
         } else {
             $sentinel = new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout);
         }
-        
+
         $sentinel->ping();
 
         return $sentinel;
