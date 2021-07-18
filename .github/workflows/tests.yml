@@ -83,7 +83,7 @@ jobs:
       - name: Run phpunit tests
         run: composer test
         env:
-          REDIS_SENTINEL_HOST: redis-sentinel
+          REDIS_SENTINEL_HOST: 127.0.0.1
           REDIS_SENTINEL_PORT: 26379
           REDIS_SENTINEL_SERVICE: mymaster
 
