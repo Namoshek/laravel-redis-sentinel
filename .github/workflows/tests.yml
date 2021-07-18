@@ -37,6 +37,7 @@ jobs:
           - 26379:26379
         env:
           REDIS_MASTER_HOST: redis
+          REDIS_MASTER_SET: mymaster
           REDIS_SENTINEL_QUORUM: 1
         options: >-
           --health-cmd "redis-cli -p 26379 ping"
@@ -83,6 +84,7 @@ jobs:
         env:
           REDIS_SENTINEL_HOST: redis-sentinel
           REDIS_SENTINEL_PORT: 26379
+          REDIS_SENTINEL_SERVICE: mymaster
 
       - name: Prepare paths for SonarQube analysis
         if: matrix.php-version == '8.0'
