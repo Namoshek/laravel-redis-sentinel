@@ -1,6 +1,5 @@
 <?php
 
-/* @noinspection PhpComposerExtensionStubsInspection */
 /* @noinspection PhpRedundantCatchClauseInspection */
 
 declare(strict_types=1);
