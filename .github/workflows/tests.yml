@@ -34,6 +34,7 @@ jobs:
           - 26379:26379
         env:
           REDIS_MASTER_HOST: redis
+          REDIS_SENTINEL_QUORUM: 1
         options: >-
           --health-cmd "redis-cli -p 26379 ping"
           --health-interval 10s
