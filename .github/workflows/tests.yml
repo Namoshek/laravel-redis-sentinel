@@ -51,6 +51,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure Redis Sentinel is reachable
+        uses: docker://bitnami/redis:6.2.4-debian-10-r35
+        with:
+          args: redis-cli -h redis-sentinel -p 26379 ping
+
+      - name: Retrieve master from Redis Sentinel
+        uses: docker://bitnami/redis:6.2.4-debian-10-r35
+        with:
+          args: redis-cli -h redis-sentinel -p 26379 sentinel master mymaster
+
       - name: Setup PHPUnit
         uses: shivammathur/setup-php@v2
         with:
@@ -78,9 +88,6 @@ jobs:
 
       - name: Install composer dependencies
         run: composer install --prefer-dist
-
-      - name: Wait a bit until the Redis and Redis Sentinel servers are ready
-        run: sleep 10
 
       - name: Run phpunit tests
         run: composer test
