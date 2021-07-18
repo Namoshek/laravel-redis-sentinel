@@ -18,6 +18,28 @@ jobs:
         operating-system: [ubuntu-latest]
         php-version: ['8.0']
 
+    services:
+      redis-sentinel:
+        image: bitnami/redis-sentinel:6.2.4-debian-10-r39
+        ports:
+          - 26379:26379
+        env:
+          REDIS_MASTER_HOST: redis
+        options: >-
+          --health-cmd "redis-cli -p 26379 ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: bitnami/redis:6.2.4-debian-10-r35
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v2
         with:
@@ -53,6 +75,9 @@ jobs:
 
       - name: Run phpunit tests
         run: composer test
+        env:
+          REDIS_SENTINEL_HOST: redis-sentinel
+          REDIS_SENTINEL_PORT: 26379
 
       - name: Prepare paths for SonarQube analysis
         if: matrix.php-version == '8.0'

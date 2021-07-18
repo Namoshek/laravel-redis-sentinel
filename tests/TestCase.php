@@ -34,5 +34,15 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
      */
     protected function getEnvironmentSetUp($app)
     {
+        // We use the phpredis-sentinel redis driver as default.
+        $app['config']->set('database.redis.client', 'phpredis-sentinel');
+
+        // Setup configuration for different types of supported databases.
+        $app['config']->set('database.redis.default', [
+            'host' => env('REDIS_SENTINEL_HOST'),
+            'port' => (int) env('REDIS_SENTINEL_PORT', 6379),
+            'password' => env('REDIS_PASSWORD'),
+            'sentinel_service' => env('REDIS_SENTINEL_SERVICE', 'mymaster'),
+        ]);
     }
 }
