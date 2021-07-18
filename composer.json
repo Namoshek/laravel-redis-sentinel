@@ -1,0 +1,62 @@
+{
+    "name": "namoshek/laravel-redis-sentinel",
+    "description": "An extension of Laravels Redis driver which supports connecting to a Redis master through Redis Sentinel.",
+    "keywords": [
+        "laravel",
+        "redis"
+    ],
+    "homepage": "https://github.com/Namoshek/laravel-redis-sentinel",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Marvin Mall",
+            "email": "marvin-mall@msn.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "illuminate/contracts": "^8.0",
+        "illuminate/redis": "^8.0",
+        "illuminate/support": "^8.0"
+    },
+    "require-dev": {
+        "ext-redis": "*",
+        "orchestra/testbench": "^6.0",
+        "squizlabs/php_codesniffer": "^3.5"
+    },
+    "suggest": {
+        "ext-redis": "Required for the phpredis-sentinel driver"
+    },
+    "scripts": {
+        "test": [
+            "@test:cs",
+            "@test:unit"
+        ],
+        "test:cs": "vendor/bin/phpcs",
+        "test:unit": "vendor/bin/phpunit --testdox --log-junit=phpunit.report-junit.xml --coverage-clover=phpunit.coverage-clover.xml --coverage-text",
+        "fix:cs": "vendor/bin/phpcbf"
+    },
+    "autoload": {
+        "psr-4": {
+            "Namoshek\\Redis\\Sentinel\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Namoshek\\Redis\\Sentinel\\Tests\\": "tests"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Namoshek\\Redis\\Sentinel\\RedisSentinelServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
