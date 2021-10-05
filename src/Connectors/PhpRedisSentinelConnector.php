@@ -66,10 +66,44 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             throw new RedisException(sprintf("No master found for service '%s'.", $service));
         }
 
-        return parent::createClient(array_merge($config, [
-            'host' => $master['ip'],
+        $host = ($config['scheme'] ?? 'tcp') . '://' . $master['ip'];
+        $options = array_merge($config, [
+            'host' => $host,
             'port' => $master['port'],
-        ]));
+        ]);
+        return parent::createClient($options);
+    }
+
+   /**
+     * Establish a connection with the Redis host.
+     *
+     * @param  \Redis  $client
+     * @param  array  $config
+     * @return void
+     */
+    protected function establishConnection($client, array $config)
+    {
+        $persistent = $config['persistent'] ?? false;
+
+        $parameters = [
+            $config['host'],
+            (int)$config['port'],
+            Arr::get($config, 'timeout', 0.0),
+            $persistent ? Arr::get($config, 'persistent_id', null) : null,
+            Arr::get($config, 'retry_interval', 0),
+        ];
+
+        if (version_compare(phpversion('redis'), '3.1.3', '>=')) {
+            $parameters[] = Arr::get($config, 'read_timeout', 0.0);
+        }
+
+        if (version_compare(phpversion('redis'), '5.3.0', '>=')) {
+            if (! is_null($context = Arr::get($config, 'context'))) {
+                $parameters[] = $context;
+            }
+        }
+
+        $client->{($persistent ? 'pconnect' : 'connect')}(...$parameters);
     }
 
     /**
