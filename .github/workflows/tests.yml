@@ -17,6 +17,10 @@ jobs:
       matrix:
         operating-system: [ubuntu-latest]
         php-version: ['8.0', '8.1']
+        include:
+          - operating-system: 'ubuntu-latest'
+            php-version: '8.1'
+            run-sonarqube-analysis: true
 
     services:
       redis:
@@ -88,14 +92,14 @@ jobs:
           REDIS_SENTINEL_SERVICE: mymaster
 
       - name: Prepare paths for SonarQube analysis
-        if: matrix.php-version == '8.1'
+        if: matrix.run-sonarqube-analysis
         run: |
           sed -i "s|$GITHUB_WORKSPACE|/github/workspace|g" phpunit.coverage-clover.xml
           sed -i "s|$GITHUB_WORKSPACE|/github/workspace|g" phpunit.report-junit.xml
 
       - name: Run SonarQube analysis
         uses: sonarsource/sonarcloud-github-action@master
-        if: matrix.php-version == '8.1'
+        if: matrix.run-sonarqube-analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
