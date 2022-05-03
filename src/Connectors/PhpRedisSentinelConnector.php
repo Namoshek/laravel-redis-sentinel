@@ -71,6 +71,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             'host' => $host,
             'port' => $master['port'],
         ]);
+
         return parent::createClient($options);
     }
 
