@@ -66,7 +66,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             throw new RedisException(sprintf("No master found for service '%s'.", $service));
         }
 
-        $host = ($config['scheme'] ?? 'tcp') . '://' . $master['ip'];
+        $host = ($config['scheme'] ?? 'tcp').'://'.$master['ip'];
         $options = array_merge($config, [
             'host' => $host,
             'port' => $master['port'],
@@ -74,7 +74,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
         return parent::createClient($options);
     }
 
-   /**
+    /**
      * Establish a connection with the Redis host.
      *
      * @param  \Redis  $client
@@ -87,7 +87,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
 
         $parameters = [
             $config['host'],
-            (int)$config['port'],
+            (int) $config['port'],
             Arr::get($config, 'timeout', 0.0),
             $persistent ? Arr::get($config, 'persistent_id', null) : null,
             Arr::get($config, 'retry_interval', 0),
