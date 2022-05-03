@@ -5,7 +5,6 @@ on:
     branches:
       - master
   pull_request:
-    types: [opened, synchronize, reopened]
 
 jobs:
   test-all:
@@ -16,11 +15,7 @@ jobs:
     strategy:
       matrix:
         operating-system: [ubuntu-latest]
-        php-version: ['8.0', '8.1']
-        include:
-          - operating-system: 'ubuntu-latest'
-            php-version: '8.1'
-            run-sonarqube-analysis: true
+        php-version: ['7.4', '8.0', '8.1']
 
     services:
       redis:
