@@ -84,20 +84,3 @@ jobs:
           REDIS_SENTINEL_HOST: 127.0.0.1
           REDIS_SENTINEL_PORT: 26379
           REDIS_SENTINEL_SERVICE: mymaster
-
-      - name: Prepare paths for SonarQube analysis
-        if: matrix.run-sonarqube-analysis
-        run: |
-          sed -i "s|$GITHUB_WORKSPACE|/github/workspace|g" phpunit.coverage-clover.xml
-          sed -i "s|$GITHUB_WORKSPACE|/github/workspace|g" phpunit.report-junit.xml
-
-      - name: Run SonarQube analysis
-        uses: sonarsource/sonarcloud-github-action@master
-        if: matrix.run-sonarqube-analysis
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
-
-      - name: Dump docker logs on failure
-        if: failure()
-        uses: jwalton/gh-docker-logs@v2
