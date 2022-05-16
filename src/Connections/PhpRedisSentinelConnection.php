@@ -41,7 +41,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     public function zscan($key, $cursor, $options = []): mixed
     {
         try {
-            return parent::sscan($key, $cursor, $options);
+            return parent::zscan($key, $cursor, $options);
         } catch (RedisException $e) {
             $this->reconnectIfRedisIsUnavailableOrReadonly($e);
 
@@ -57,7 +57,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     public function hscan($key, $cursor, $options = []): mixed
     {
         try {
-            return parent::sscan($key, $cursor, $options);
+            return parent::hscan($key, $cursor, $options);
         } catch (RedisException $e) {
             $this->reconnectIfRedisIsUnavailableOrReadonly($e);
 
