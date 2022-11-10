@@ -22,11 +22,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
         $this->expectException(NotImplementedException::class);
 
         $connector = new PhpRedisSentinelConnector();
-        $connector->connectToCluster(
-            config: [],
-            clusterOptions: [],
-            options: []
-        );
+        $connector->connectToCluster([], [], []);
     }
 
     /**
@@ -64,8 +60,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->transaction(fn (Redis $redis) => throw new RedisException('went away'));
-        } catch (RedisException) {
+            $connection->transaction(function (Redis $redis) {
+                throw new RedisException('went away');
+            });
+        } catch (RedisException $e) {
             // Ignored on purpose.
         }
 
@@ -97,8 +95,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->transaction(fn (Redis $redis) => throw new RedisException('READONLY'));
-        } catch (RedisException) {
+            $connection->transaction(function (Redis $redis) {
+                throw new RedisException('READONLY');
+            });
+        } catch (RedisException $e) {
             // Ignored on purpose.
         }
 
@@ -130,8 +130,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->transaction(fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"));
-        } catch (RedisException) {
+            $connection->transaction(function (Redis $redis) {
+                throw new RedisException("You can't write against a read only replica");
+            });
+        } catch (RedisException $e) {
             // Ignored on purpose.
         }
 
