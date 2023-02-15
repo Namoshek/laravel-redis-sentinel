@@ -17,7 +17,7 @@
     </php>
     <testsuites>
         <testsuite name="Test">
-            <directory suffix=".php">tests</directory>
+            <directory suffix="Test.php">tests</directory>
         </testsuite>
     </testsuites>
     <coverage>
