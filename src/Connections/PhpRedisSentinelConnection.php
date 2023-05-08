@@ -17,6 +17,23 @@ use RedisException;
  */
 class PhpRedisSentinelConnection extends PhpRedisConnection
 {
+    // The following array contains all exception message parts which are interpreted as a connection loss or
+    // another unavailability of Redis.
+    private const ERROR_MESSAGES_INDICATING_UNAVAILABILITY = [
+        'connection closed',
+        'connection refused',
+        'connection lost',
+        'failed while reconnecting',
+        'is loading the dataset in memory',
+        'php_network_getaddresses',
+        'read error on connection',
+        'socket',
+        'went away',
+        'loading',
+        'readonly',
+        "can't write against a read only replica",
+    ];
+
     /**
      * {@inheritdoc}
      *
@@ -215,18 +232,19 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      */
     private function reconnectIfRedisIsUnavailableOrReadonly(RedisException $exception): void
     {
-        // Reconnect through Redis Sentinel if we lost connection to the server. We may actually reconnect to the same,
-        // broken server. But after a failover occured, we should be ok.
-        if (Str::contains($exception->getMessage(), 'went away')) {
-            $this->reconnect();
+        // We convert the exception message to lower-case in order to perform case-insensitive comparison.
+        $exceptionMessage = strtolower($exception->getMessage());
 
-            return;
-        }
+        // Because we also match only partial exception messages, we cannot use in_array() at this point.
+        foreach (self::ERROR_MESSAGES_INDICATING_UNAVAILABILITY as $errorMessage) {
+            if (str_contains($exceptionMessage, $errorMessage)) {
+                // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
+                // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
+                // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
+                $this->reconnect();
 
-        // Force a reconnect through the Sentinel in case the Redis instance became readonly due to a failover.
-        // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
-        if (Str::contains($exception->getMessage(), ['READONLY', "You can't write against a read only replica"])) {
-            $this->reconnect();
+                return;
+            }
         }
     }
 
