@@ -91,14 +91,14 @@ jobs:
           REDIS_SENTINEL_SERVICE: mymaster
 
       - name: Prepare paths for SonarQube analysis
-        if: matrix.run-sonarqube-analysis
+        if: ${{ matrix.run-sonarqube-analysis && !github.event.pull_request.head.repo.fork }}
         run: |
           sed -i "s|$GITHUB_WORKSPACE|/github/workspace|g" phpunit.coverage-clover.xml
           sed -i "s|$GITHUB_WORKSPACE|/github/workspace|g" phpunit.report-junit.xml
 
       - name: Run SonarQube analysis
         uses: sonarsource/sonarcloud-github-action@master
-        if: matrix.run-sonarqube-analysis
+        if: ${{ matrix.run-sonarqube-analysis && !github.event.pull_request.head.repo.fork }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
