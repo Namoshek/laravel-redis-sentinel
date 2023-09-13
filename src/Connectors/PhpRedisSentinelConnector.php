@@ -91,11 +91,28 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             throw new ConfigurationException('No host has been specified for the Redis Sentinel connection.');
         }
 
-        if (strlen(trim($password)) !== 0) {
-            /** @noinspection PhpMethodParametersCountMismatchInspection */
-            return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout, $password);
-        }
+        if (version_compare(phpversion('redis'), '6.0', '>=')) {
+            $options = [
+                'host' => $host,
+                'port' => $port,
+                'connectTimeout' => $timeout,
+                'persistent' => $persistent,
+                'retryInterval' => $retryInterval,
+                'readTimeout' => $readTimeout,
+            ];
 
-        return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout);
+            if (strlen(trim($password)) !== 0) {
+                $options['auth'] = $password;
+            }
+
+            return new RedisSentinel($options);
+        } else {
+            if (strlen(trim($password)) !== 0) {
+                /** @noinspection PhpMethodParametersCountMismatchInspection */
+                return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout, $password);
+            }
+
+            return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout);
+        }
     }
 }
