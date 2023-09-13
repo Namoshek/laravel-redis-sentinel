@@ -92,27 +92,20 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
         }
 
         if (version_compare(phpversion('redis'), '6.0', '>=')) {
-            if (strlen(trim($password)) !== 0) {
-                /** @noinspection PhpMethodParametersCountMismatchInspection */
-                return new RedisSentinel([
-                    'host' => $host,
-                    'port' => $port,
-                    'connectTimeout' => $timeout,
-                    'persistent' => $persistent,
-                    'retryInterval' => $retryInterval,
-                    'readTimeout' => $readTimeout,
-                    'auth' => $password,
-                ]);
-            }
-
-            return new RedisSentinel([
+            $options = [
                 'host' => $host,
                 'port' => $port,
                 'connectTimeout' => $timeout,
                 'persistent' => $persistent,
                 'retryInterval' => $retryInterval,
                 'readTimeout' => $readTimeout,
-            ]);
+            ];
+
+            if (strlen(trim($password)) !== 0) {
+                $options['auth'] = $password;
+            }
+
+            return new RedisSentinel($options);
         } else {
             if (strlen(trim($password)) !== 0) {
                 /** @noinspection PhpMethodParametersCountMismatchInspection */
