@@ -93,9 +93,24 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
 
         if (strlen(trim($password)) !== 0) {
             /** @noinspection PhpMethodParametersCountMismatchInspection */
-            return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout, $password);
+            return new RedisSentinel([
+                'host' => $host,
+                'port' => $port,
+                'connectTimeout' => $timeout,
+                'persistent' => $persistent,
+                'retryInterval' => $retryInterval,
+                'readTimeout' => $readTimeout,
+                'auth' => $password,
+            ]);
         }
 
-        return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout);
+        return new RedisSentinel([
+            'host' => $host,
+            'port' => $port,
+            'connectTimeout' => $timeout,
+            'persistent' => $persistent,
+            'retryInterval' => $retryInterval,
+            'readTimeout' => $readTimeout,
+        ]);
     }
 }
