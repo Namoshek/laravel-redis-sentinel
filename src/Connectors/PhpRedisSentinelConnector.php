@@ -58,7 +58,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
 
         $master = $sentinel->master($service);
 
-        if (!$this->isValidMaster($master)) {
+        if (! $this->isValidMaster($master)) {
             throw new RedisException(sprintf("No master found for service '%s'.", $service));
         }
 
@@ -69,12 +69,9 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
     }
 
     /**
-     * Check whether master is valid or not
-     *
-     * @param $master
-     * @return bool
+     * Check whether master is valid or not.
      */
-    protected function isValidMaster($master): bool
+    protected function isValidMaster(mixed $master): bool
     {
         return is_array($master) && isset($master['ip']) && isset($master['port']);
     }
