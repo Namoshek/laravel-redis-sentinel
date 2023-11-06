@@ -236,15 +236,11 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $exceptionMessage = strtolower($exception->getMessage());
 
         // Because we also match only partial exception messages, we cannot use in_array() at this point.
-        foreach (self::ERROR_MESSAGES_INDICATING_UNAVAILABILITY as $errorMessage) {
-            if (str_contains($exceptionMessage, $errorMessage)) {
-                // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
-                // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
-                // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
-                $this->reconnect();
-
-                return;
-            }
+        if (str_contains($exceptionMessage, ...self::ERROR_MESSAGES_INDICATING_UNAVAILABILITY)) {
+            // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
+            // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
+            // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
+            $this->reconnect();
         }
     }
 
