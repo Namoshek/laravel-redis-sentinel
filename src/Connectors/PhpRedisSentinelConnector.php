@@ -117,8 +117,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             $auth = null;
             if (strlen(trim($password)) !== 0 && strlen(trim($username)) !== 0) {
                 $auth = [$username, $password];
-            }
-            elseif (strlen(trim($password)) !== 0) {
+            } elseif (strlen(trim($password)) !== 0) {
                 $auth = $password;
             }
 
