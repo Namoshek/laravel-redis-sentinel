@@ -116,7 +116,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             if ($auth !== null) {
                 $options['auth'] = $auth;
             }
-            
+
             return new RedisSentinel($options);
         }
 
