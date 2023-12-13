@@ -96,33 +96,26 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             throw new ConfigurationException('No host has been specified for the Redis Sentinel connection.');
         }
 
+        $auth = null;
+        if (strlen(trim($username)) !== 0 && strlen(trim($password)) !== 0) {
+            $auth = [$username, $password];
+        } elseif (strlen(trim($password)) !== 0) {
+            $auth = $password;
+        }
+
         if (version_compare(phpversion('redis'), '6.0', '>=')) {
-            $options = [
+            return new RedisSentinel([
                 'host' => $host,
                 'port' => $port,
                 'connectTimeout' => $timeout,
                 'persistent' => $persistent,
                 'retryInterval' => $retryInterval,
                 'readTimeout' => $readTimeout,
-            ];
-
-            if (strlen(trim($password)) !== 0 && strlen(trim($username)) !== 0) {
-                $options['auth'] = [$username, $password];
-            } elseif (strlen(trim($password)) !== 0) {
-                $options['auth'] = $password;
-            }
-
-            return new RedisSentinel($options);
-        } else {
-            $auth = null;
-            if (strlen(trim($password)) !== 0 && strlen(trim($username)) !== 0) {
-                $auth = [$username, $password];
-            } elseif (strlen(trim($password)) !== 0) {
-                $auth = $password;
-            }
-
-            /** @noinspection PhpMethodParametersCountMismatchInspection */
-            return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout, $auth);
+                'auth' => $auth,
+            ]);
         }
+
+        /** @noinspection PhpMethodParametersCountMismatchInspection */
+        return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout, $auth);
     }
 }
