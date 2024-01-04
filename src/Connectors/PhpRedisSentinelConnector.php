@@ -120,7 +120,11 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             return new RedisSentinel($options);
         }
 
-        /** @noinspection PhpMethodParametersCountMismatchInspection */
-        return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout, $auth);
+        if ($auth !== null) {
+            /** @noinspection PhpMethodParametersCountMismatchInspection */
+            return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout, $auth);
+        }
+
+        return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout);
     }
 }
