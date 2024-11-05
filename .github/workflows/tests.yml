@@ -16,15 +16,15 @@ jobs:
     strategy:
       matrix:
         operating-system: [ubuntu-latest]
-        php-version: ['8.0', '8.1', '8.2']
+        php-version: ['8.1', '8.2', '8.3']
         include:
           - operating-system: 'ubuntu-latest'
-            php-version: '8.2'
+            php-version: '8.3'
             run-sonarqube-analysis: true
 
     services:
       redis:
-        image: bitnami/redis:6.2.4-debian-10-r35
+        image: bitnami/redis:7.4-debian-12
         ports:
           - 6379:6379
         env:
@@ -36,7 +36,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis-sentinel:
-        image: bitnami/redis-sentinel:6.2.4-debian-10-r39
+        image: bitnami/redis-sentinel:7.4-debian-12
         ports:
           - 26379:26379
         env:
@@ -60,7 +60,6 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           extensions: redis
-          tools: phpunit:9.5.0
           coverage: pcov
 
       - name: Setup problem matchers for PHP
