@@ -91,6 +91,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
         $readTimeout = $config['sentinel_read_timeout'] ?? 0;
         $username = $config['sentinel_username'] ?? '';
         $password = $config['sentinel_password'] ?? '';
+        $ssl = $config['sentinel_ssl'] ?? null;
 
         if (strlen(trim($host)) === 0) {
             throw new ConfigurationException('No host has been specified for the Redis Sentinel connection.');
@@ -115,6 +116,10 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
 
             if ($auth !== null) {
                 $options['auth'] = $auth;
+            }
+
+            if (version_compare(phpversion('redis'), '6.1', '>=') && $ssl !== null) {
+                $options['ssl'] = $ssl;
             }
 
             return new RedisSentinel($options);

@@ -70,6 +70,20 @@ Noteworthy is the `sentinel_service`, which represents the instance name of the 
 
 All other options are the same for the Redis Sentinel driver, except that `url` is not supported and `host` and `port` are ignored.
 
+### SSL Support
+
+If you want to use SSL to connect to Redis Sentinel, you need to add an additional configuration option 'sentinel_ssl' next to the other 'sentinel_*' settings:
+
+```php
+'sentinel_ssl' => [
+    // ... ssl settings ...
+],
+```
+
+Available SSL context options can be found in the [official PHP documentation](https://www.php.net/manual/en/context.ssl.php).
+
+NOTE: The SSL options only work for the `phpredis` extension starting from version 6.1.0.
+
 ### How does it work?
 
 An additional Laravel Redis driver is added (`phpredis-sentinel`), which resolves the currently declared master instance of a replication
