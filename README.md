@@ -43,7 +43,6 @@ To use the Redis Sentinel driver, the `redis` section in `config/database.php` n
 
 ```php
 'redis' => [
-
     'client' => env('REDIS_CLIENT', 'phpredis-sentinel'),
 
     'default' => [
@@ -70,19 +69,64 @@ Noteworthy is the `sentinel_service`, which represents the instance name of the 
 
 All other options are the same for the Redis Sentinel driver, except that `url` is not supported and `host` and `port` are ignored.
 
-### SSL Support
+### SSL/TLS Support
 
-If you want to use SSL to connect to Redis Sentinel, you need to add an additional configuration option 'sentinel_ssl' next to the other 'sentinel_*' settings:
+If you want to use SSL/TLS to connect to Redis Sentinel, you need to add an additional configuration option `sentinel_ssl` next to the other `sentinel_*` settings:
 
 ```php
 'sentinel_ssl' => [
-    // ... ssl settings ...
+    // ... SSL settings ...
 ],
 ```
 
-Available SSL context options can be found in the [official PHP documentation](https://www.php.net/manual/en/context.ssl.php).
+Available SSL context options can be found in the [official PHP documentation](https://www.php.net/manual/en/context.ssl.php). Please note that SSL support for the Sentinel connection was added to the `phpredis` extension starting in version 6.1.
 
-NOTE: The SSL options only work for the `phpredis` extension starting from version 6.1.0.
+Also note that if your Redis Sentinel resolves SSL connections to Redis, you potentially need to add additional context options for your Redis connection:
+
+```php
+'context' => [
+    'stream' => [
+        // ... SSL settings ...
+    ]
+],
+'scheme' => 'tls',
+```
+
+A full configuration example using SSL for Redis Sentinel as well as Redis looks like this if authentication is also enabled (environment variables omitted for clarity):
+
+```php
+'redis' => [
+    'client' => 'phpredis-sentinel',
+
+    'redis_with_tls' => [
+        'sentinel_host' => 'tls://sentinel_host',
+        'sentinel_port' => 26379,
+        'sentinel_service' => 'mymaster',
+        'sentinel_timeout' => 0,
+        'sentinel_persistent' => false,
+        'sentinel_retry_interval' => 0,
+        'sentinel_read_timeout' => 0,
+        'sentinel_username' => 'sentinel_username',
+        'sentinel_password' => 'sentinel_password',
+        'sentinel_ssl' => [
+            'cafile' => '/path/to/sentinel_ca.crt',
+        ],
+        'context' => [
+            'stream' => [
+                'cafile' => '/path/to/redis_ca.crt',
+            ],
+        ],
+        'scheme' => 'tls',
+        'username' => 'redis_username',
+        'password' => 'redis_password',
+        'database' => 1,
+    ]
+]
+```
+
+The important parts are the `tls://` protocol in `sentinel_host` as well as the `tls` in `scheme`, plus the `sentinel_ssl` and `context.stream` options.
+
+Because Redis Sentinel resolves Redis instances by IP and port, your Redis certificate needs to have the IP as SAN. Alternatively, you can set `verify_peer` and maybe also `verify_peer_name` to `false`.
 
 ### How does it work?
 
