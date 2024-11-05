@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
-    backupGlobals="false"
-    backupStaticProperties="false"
-    cacheDirectory=".phpunit.cache"
-    colors="true"
-    processIsolation="false"
-    stopOnFailure="false"
->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         shortenArraysForExportThreshold="10"
+         requireCoverageMetadata="false"
+         beStrictAboutCoverageMetadata="true"
+         beStrictAboutOutputDuringTests="true"
+         displayDetailsOnPhpunitDeprecations="true"
+         failOnPhpunitDeprecation="true"
+         failOnRisky="true"
+         failOnWarning="true">
     <php>
         <env name="APP_KEY" value="nutfSECXIvnK5r28GVIWUAxmbBSjTsmF"/>
         <env name="REDIS_SENTINEL_HOST" value="127.0.0.1"/>
@@ -16,13 +19,13 @@
         <env name="REDIS_SENTINEL_SERVICE" value="service1"/>
     </php>
     <testsuites>
-        <testsuite name="Test">
-            <directory suffix="Test.php">tests</directory>
+        <testsuite name="default">
+            <directory>tests</directory>
         </testsuite>
     </testsuites>
-    <coverage>
+    <source ignoreIndirectDeprecations="true" restrictNotices="true" restrictWarnings="true">
         <include>
-            <directory suffix=".php">src</directory>
+            <directory>src</directory>
         </include>
-    </coverage>
+    </source>
 </phpunit>
