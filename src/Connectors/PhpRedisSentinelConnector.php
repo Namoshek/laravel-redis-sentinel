@@ -8,7 +8,6 @@ use Illuminate\Redis\Connectors\PhpRedisConnector;
 use Illuminate\Support\Arr;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Exceptions\ConfigurationException;
-use Namoshek\Redis\Sentinel\Exceptions\NotImplementedException;
 use Redis;
 use RedisException;
 use RedisSentinel;

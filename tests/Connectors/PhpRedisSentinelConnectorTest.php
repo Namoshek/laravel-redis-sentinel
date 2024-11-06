@@ -7,7 +7,6 @@ namespace Namoshek\Redis\Sentinel\Tests\Connectors;
 use Illuminate\Redis\RedisManager;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
-use Namoshek\Redis\Sentinel\Exceptions\NotImplementedException;
 use Namoshek\Redis\Sentinel\Tests\TestCase;
 use Redis;
 use RedisException;
