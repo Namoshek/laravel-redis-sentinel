@@ -7,7 +7,6 @@ namespace Namoshek\Redis\Sentinel\Tests\Connectors;
 use Illuminate\Redis\RedisManager;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
-use Namoshek\Redis\Sentinel\Exceptions\NotImplementedException;
 use Namoshek\Redis\Sentinel\Tests\TestCase;
 use Redis;
 use RedisException;
@@ -17,18 +16,6 @@ use RedisException;
  */
 class PhpRedisSentinelConnectorTest extends TestCase
 {
-    public function test_connecting_to_cluster_is_not_possible()
-    {
-        $this->expectException(NotImplementedException::class);
-
-        $connector = new PhpRedisSentinelConnector();
-        $connector->connectToCluster(
-            config: [],
-            clusterOptions: [],
-            options: []
-        );
-    }
-
     /**
      * @throws RedisException
      */

@@ -8,7 +8,6 @@ use Illuminate\Redis\Connectors\PhpRedisConnector;
 use Illuminate\Support\Arr;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Exceptions\ConfigurationException;
-use Namoshek\Redis\Sentinel\Exceptions\NotImplementedException;
 use Redis;
 use RedisException;
 use RedisSentinel;
@@ -34,14 +33,6 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
         };
 
         return new PhpRedisSentinelConnection($connector(), $connector, $config);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function connectToCluster(array $config, array $clusterOptions, array $options)
-    {
-        throw new NotImplementedException('The Redis Sentinel driver does not support connecting to clusters.');
     }
 
     /**
