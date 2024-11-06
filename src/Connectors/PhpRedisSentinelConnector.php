@@ -37,14 +37,6 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function connectToCluster(array $config, array $clusterOptions, array $options)
-    {
-        throw new NotImplementedException('The Redis Sentinel driver does not support connecting to clusters.');
-    }
-
-    /**
      * Create the PhpRedis client instance which connects to Redis Sentinel.
      *
      * @throws ConfigurationException
