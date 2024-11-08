@@ -47,16 +47,16 @@ To use the Redis Sentinel driver, the `redis` section in `config/database.php` n
 
     'default' => [
         'sentinel_host' => env('REDIS_SENTINEL_HOST', '127.0.0.1'),
-        'sentinel_port' => env('REDIS_SENTINEL_PORT', 26379),
+        'sentinel_port' => (int) env('REDIS_SENTINEL_PORT', 26379),
         'sentinel_service' => env('REDIS_SENTINEL_SERVICE', 'mymaster'),
-        'sentinel_timeout' => env('REDIS_SENTINEL_TIMEOUT', 0),
+        'sentinel_timeout' => (float) env('REDIS_SENTINEL_TIMEOUT', 0),
         'sentinel_persistent' => env('REDIS_SENTINEL_PERSISTENT'),
-        'sentinel_retry_interval' => env('REDIS_SENTINEL_RETRY_INTERVAL', 0),
-        'sentinel_read_timeout' => env('REDIS_SENTINEL_READ_TIMEOUT', 0),
+        'sentinel_retry_interval' => (int) env('REDIS_SENTINEL_RETRY_INTERVAL', 0),
+        'sentinel_read_timeout' => (float) env('REDIS_SENTINEL_READ_TIMEOUT', 0),
         'sentinel_username' => env('REDIS_SENTINEL_USERNAME'),
         'sentinel_password' => env('REDIS_SENTINEL_PASSWORD'),
         'password' => env('REDIS_PASSWORD'),
-        'database' => env('REDIS_DB', 0),
+        'database' => (int) env('REDIS_DB', 0),
     ]
 ]
 ```
