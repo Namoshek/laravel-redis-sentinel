@@ -103,7 +103,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      *
      * @throws RedisException
      */
-    public function pipeline(callable $callback = null): Redis|array
+    public function pipeline(?callable $callback = null): Redis|array
     {
         try {
             return parent::pipeline($callback);
@@ -119,7 +119,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      *
      * @throws RedisException
      */
-    public function transaction(callable $callback = null): Redis|array
+    public function transaction(?callable $callback = null): Redis|array
     {
         try {
             return parent::transaction($callback);
