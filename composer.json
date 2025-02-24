@@ -30,9 +30,9 @@
             "@test:cs",
             "@test:unit"
         ],
-        "test:cs": "`PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --dry-run --diff --ansi",
+        "test:cs": "PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --dry-run --diff --ansi",
         "test:unit": "vendor/bin/phpunit --testdox --log-junit=phpunit.report-junit.xml --coverage-clover=phpunit.coverage-clover.xml --coverage-text",
-        "fix:cs": "`PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --diff --ansi"
+        "fix:cs": "PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --diff --ansi"
     },
     "autoload": {
         "psr-4": {
