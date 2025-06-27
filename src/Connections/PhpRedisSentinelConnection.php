@@ -8,7 +8,7 @@ namespace Namoshek\Redis\Sentinel\Connections;
 
 use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
-use Illuminate\Support\Str;
+use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Redis;
 use RedisException;
 
@@ -17,8 +17,44 @@ use RedisException;
  */
 class PhpRedisSentinelConnection extends PhpRedisConnection
 {
-    // The following array contains all exception message parts which are interpreted as a connection loss or
-    // another unavailability of Redis.
+    /**
+     * The number of times the client attempts to retry a command when it fails
+     * to connect to a Redis instance behind Sentinel.
+     */
+    protected int $retryAttempts = 20;
+
+    /**
+     * The time in milliseconds to wait before the client retries a failed
+     * command.
+     */
+    protected int $retryDelay = 1000;
+
+    /**
+     * Create a new PhpRedis connection.
+     *
+     * @param  \Redis  $client
+     * @param  callable|null  $connector
+     * @param  array  $config
+     */
+    public function __construct($client, ?callable $connector = null, array $config = [])
+    {
+        parent::__construct($client, $connector, $config);
+
+        // Set the retry limit.
+        if (isset($config['retry_attempts']) && is_numeric($config['retry_attempts'])) {
+            $this->retryAttempts = (int) $config['retry_attempts'];
+        }
+
+        // Set the retry wait.
+        if (isset($config['retry_delay']) && is_numeric($config['retry_delay'])) {
+            $this->retryDelay = (int) $config['retry_delay'];
+        }
+    }
+
+    /**
+     * The following array contains all exception message parts which are interpreted as a connection loss or
+     * another unavailability of Redis.
+     */
     private const ERROR_MESSAGES_INDICATING_UNAVAILABILITY = [
         'connection closed',
         'connection refused',
@@ -36,194 +72,138 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function scan($cursor, $options = []): mixed
     {
-        try {
-            return parent::scan($cursor, $options);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::scan($cursor, $options));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function zscan($key, $cursor, $options = []): mixed
     {
-        try {
-            return parent::zscan($key, $cursor, $options);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::zscan($key, $cursor, $options));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function hscan($key, $cursor, $options = []): mixed
     {
-        try {
-            return parent::hscan($key, $cursor, $options);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::hscan($key, $cursor, $options));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function sscan($key, $cursor, $options = []): mixed
     {
-        try {
-            return parent::sscan($key, $cursor, $options);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::sscan($key, $cursor, $options));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function pipeline(?callable $callback = null): Redis|array
     {
-        try {
-            return parent::pipeline($callback);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::pipeline($callback));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function transaction(?callable $callback = null): Redis|array
     {
-        try {
-            return parent::transaction($callback);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::transaction($callback));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function evalsha($script, $numkeys, ...$arguments): mixed
     {
-        try {
-            return parent::evalsha($script, $numkeys, $arguments);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::evalsha($script, $numkeys, $arguments));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function subscribe($channels, Closure $callback): void
     {
-        try {
-            parent::subscribe($channels, $callback);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        $this->retryOnFailure(fn () => parent::subscribe($channels, $callback));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function psubscribe($channels, Closure $callback): void
     {
-        try {
-            parent::psubscribe($channels, $callback);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        $this->retryOnFailure(fn () => parent::psubscribe($channels, $callback));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function flushdb(): void
     {
-        try {
-            parent::flushdb();
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        $this->retryOnFailure(fn () => parent::flushdb());
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
      */
     public function command($method, array $parameters = []): mixed
     {
-        try {
-            return parent::command($method, $parameters);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
-
-            throw $e;
-        }
+        return $this->retryOnFailure(fn () => parent::command($method, $parameters));
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws RedisException
+     */
+    public function withoutRetries(?callable $callback = null): Redis|array
+    {
+        return $this->retryOnFailure(
+            callback: fn () => parent::transaction($callback),
+            retryAttempts: 0,
+            retryDelay: 1000,
+        );
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function __call($method, $parameters): mixed
     {
-        try {
-            return parent::__call(strtolower($method), $parameters);
-        } catch (RedisException $e) {
-            $this->reconnectIfRedisIsUnavailableOrReadonly($e);
+        return $this->retryOnFailure(fn () => parent::__call(strtolower($method), $parameters));
+    }
 
-            throw $e;
-        }
+    /**
+     * Attempt to retry the provided operation when the client fails to connect
+     * to a Redis server.
+     *
+     * @param callable $callback The operation to execute.
+     * @param
+     * @return mixed The result of the first successful attempt.
+     */
+    protected function retryOnFailure(
+        callable $callback,
+        ?int $retryAttempts = null,
+        ?int $retryDelay = null,
+    ): mixed {
+        $retryAttempts ??= $this->retryAttempts;
+        $retryDelay ??= $this->retryDelay;
+
+        return PhpRedisSentinelConnector::retryOnFailure($callback, $retryAttempts, $retryDelay, function (RedisException $exception) {
+            $this->disconnect();
+
+            try {
+                $this->reconnectIfRedisIsUnavailableOrReadonly($exception);
+            } catch (RedisException $exception) {
+                // Ignore when the creation of a new client gets an exception.
+                // If this exception isn't caught the retry will stop.
+            }
+        });
     }
 
     /**

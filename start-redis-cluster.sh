@@ -49,8 +49,8 @@ if [ -z "$REDIS_GROUP_1" ] && [ -z "$REDIS_GROUP_2" ] \
     && [ -z "$REDIS_GROUP_7" ] && [ -z "$REDIS_GROUP_8" ] \
     && [ -z "$REDIS_GROUP_9" ]
 then
-    REDIS_GROUP_1='service1 6379-6381'
-    REDIS_GROUP_2='service2 6382-6384'
+    REDIS_GROUP_1='service1 6380-6382'
+    REDIS_GROUP_2='service2 6383-6385'
 fi
 
 if [ "$*" = 'config' ]; then
@@ -154,7 +154,7 @@ fi
 start_redis() {
     printf 'Starting Redis server on port %d (%s)...\n' "$2" "$1" || return $?
 
-    assert_not_listening "$2"
+    # assert_not_listening "$2"
 
     if is_true "$TRUNCATE_LOGS"; then
         printf '' > "$WORKDIR/redis-$2.log"

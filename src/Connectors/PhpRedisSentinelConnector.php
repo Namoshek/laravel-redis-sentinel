@@ -8,6 +8,7 @@ use Illuminate\Redis\Connectors\PhpRedisConnector;
 use Illuminate\Support\Arr;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Exceptions\ConfigurationException;
+use Namoshek\Redis\Sentinel\Exceptions\RedisRetryException;
 use Redis;
 use RedisException;
 use RedisSentinel;
@@ -122,5 +123,41 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
         }
 
         return new RedisSentinel($host, $port, $timeout, $persistent, $retryInterval, $readTimeout);
+    }
+
+    /**
+     * Retry the callback when a RedisException is catched.
+     *
+     * @param callable $callback The operation to execute.
+     * @param int $retryAttempts The number of times the retry is performed.
+     * @param int $retryDelay The time in milliseconds to wait before retrying again.
+     * @param callable $failureCallback The operation to execute when a failure happens.
+     * @throws RedisRetryException After exhausting the allowed number of attempts to connect.
+     * @return mixed The result of the first successful attempt.
+     */
+    public static function retryOnFailure(
+        callable $callback,
+        int $retryAttempts = 3,
+        int $retryDelay = 1000,
+        ?callable $failureCallback = null,
+    ): mixed {
+        $previousException = null;
+        for ($attempts = 0; $attempts <= $retryAttempts; $attempts++) {
+            try {
+                return $callback();
+            } catch (RedisException $exception) {
+                $previousException = $exception;
+
+                if ($retryAttempts !== 0) {
+                    usleep($retryDelay * 1000);
+                }
+
+                if ($failureCallback) {
+                    call_user_func($failureCallback, $exception);
+                }
+            }
+        }
+
+        throw new RedisRetryException(sprintf('Reached the (re)connect limit of %d attempts.', $attempts), 0, $previousException);
     }
 }

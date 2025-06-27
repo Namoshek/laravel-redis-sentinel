@@ -19,7 +19,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
     /**
      * @throws RedisException
      */
-    public function test_connecting_to_redis_through_sentinel_without_password_works()
+    public function test_connecting_to_redis_through_sentinel_without_password_works(): void
     {
         /** @var RedisManager $redisManager */
         $redisManager = $this->app->make('redis');
@@ -33,7 +33,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
     /**
      * @throws RedisException
      */
-    public function test_when_connection_goes_away_it_is_reestablished()
+    public function test_retries_when_master_goes_away(): void
     {
         /** @var RedisManager $redisManager */
         $redisManager = $this->app->make('redis');
@@ -42,31 +42,45 @@ class PhpRedisSentinelConnectorTest extends TestCase
         /** @var PhpRedisSentinelConnection $connection */
         $connection = $redisManager->connection('default');
         $clientId = spl_object_hash($connection->client());
+        $port = $connection->executeRaw(['CONFIG', 'GET', 'port'])[1];
 
         // Perform some random actions.
-        $connection->ping();
+        $start = time();
         $connection->set('foo', 'bar');
+        $durationWithoutSegfault = time() - $start;
+
         $connection->get('foo');
         $connection->del('foo');
 
-        // Force an exception, but avoid aborting the test case.
+        // Force the shutdown of a node, but avoid aborting the test case.
         try {
-            $connection->transaction(fn (Redis $redis) => throw new RedisException('went away'));
+            $connection->withoutRetries(fn (Redis $redis) => $redis->rawCommand('DEBUG', 'SEGFAULT'));
         } catch (RedisException) {
             // Ignored on purpose.
         }
 
-        // Connect a second time and compare the object hash of this and the old connection.
-        $connection = $redisManager->connection('default');
-        $clientId2 = spl_object_hash($connection->client());
+        // Set and check if a new Redis instance is connected.
+        $start = time();
+        $connection->set('foo', 'bar');
+        $durationWithSegfault = time() - $start;
 
-        self::assertNotSame($clientId, $clientId2);
+        $connection->get('foo');
+        $connection->del('foo');
+
+        self::assertEquals(0, $durationWithoutSegfault);
+        self::assertGreaterThan(1, $durationWithSegfault);
+
+        // Check the port is updated.
+        self::assertNotSame($port, $connection->executeRaw(['CONFIG', 'GET', 'port'])[1]);
+
+        // Connect a second time and compare the object hash of this and the old connection.
+        self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 
     /**
      * @throws RedisException
      */
-    public function test_when_connection_becomes_readonly_it_is_reestablished()
+    public function test_when_connection_goes_away_it_is_reestablished(): void
     {
         /** @var RedisManager $redisManager */
         $redisManager = $this->app->make('redis');
@@ -84,22 +98,19 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->transaction(fn (Redis $redis) => throw new RedisException('READONLY'));
+            $connection->withoutRetries(fn (Redis $redis) => throw new RedisException('went away'));
         } catch (RedisException) {
             // Ignored on purpose.
         }
 
         // Connect a second time and compare the object hash of this and the old connection.
-        $connection = $redisManager->connection('default');
-        $clientId2 = spl_object_hash($connection->client());
-
-        self::assertNotSame($clientId, $clientId2);
+        self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 
     /**
      * @throws RedisException
      */
-    public function test_when_connection_becomes_readonly_it_is_reestablished2()
+    public function test_when_connection_becomes_readonly_it_is_reestablished(): void
     {
         /** @var RedisManager $redisManager */
         $redisManager = $this->app->make('redis');
@@ -117,15 +128,42 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->transaction(fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"));
+            $connection->withoutRetries(fn (Redis $redis) => throw new RedisException('READONLY'));
         } catch (RedisException) {
             // Ignored on purpose.
         }
 
         // Connect a second time and compare the object hash of this and the old connection.
-        $connection = $redisManager->connection('default');
-        $clientId2 = spl_object_hash($connection->client());
+        self::assertNotSame($clientId, spl_object_hash($connection->client()));
+    }
 
-        self::assertNotSame($clientId, $clientId2);
+    /**
+     * @throws RedisException
+     */
+    public function test_when_connection_becomes_readonly_it_is_reestablished2(): void
+    {
+        /** @var RedisManager $redisManager */
+        $redisManager = $this->app->make('redis');
+
+        // Connect for the first time and remember the object hash of the connection.
+        /** @var PhpRedisSentinelConnection $connection */
+        $connection = $redisManager->connection('default');
+        $clientId = spl_object_hash($connection->client());
+
+        // Perform some random actions.
+        $connection->ping();
+        $connection->set('foo', 'bar');
+        $connection->get('foo');
+        $connection->del('foo');
+
+        // Force an exception, but avoid aborting the test case.
+        try {
+            $connection->withoutRetries(fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"));
+        } catch (RedisException) {
+            // Ignored on purpose.
+        }
+
+        // Connect a second time and compare the object hash of this and the old connection.
+        self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 }
