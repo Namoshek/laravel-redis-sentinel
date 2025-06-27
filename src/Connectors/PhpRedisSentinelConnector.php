@@ -146,6 +146,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             try {
                 return $callback();
             } catch (RedisException $exception) {
+                var_dump($exception);
                 $previousException = $exception;
 
                 if ($retryAttempts !== 0) {

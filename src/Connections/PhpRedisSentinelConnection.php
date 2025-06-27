@@ -9,6 +9,7 @@ namespace Namoshek\Redis\Sentinel\Connections;
 use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
+use Namoshek\Redis\Sentinel\Exceptions\RedisRetryException;
 use Redis;
 use RedisException;
 
@@ -161,12 +162,11 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     /**
      * {@inheritdoc}
      */
-    public function withoutRetries(?callable $callback = null): Redis|array
+    public function skipRetries(?callable $callback = null): Redis|array
     {
         return $this->retryOnFailure(
-            callback: fn () => parent::transaction($callback),
-            retryAttempts: 0,
-            retryDelay: 1000,
+            fn () => parent::transaction($callback),
+            $retryAttempts = 0,
         );
     }
 
@@ -194,23 +194,45 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $retryAttempts ??= $this->retryAttempts;
         $retryDelay ??= $this->retryDelay;
 
-        return PhpRedisSentinelConnector::retryOnFailure($callback, $retryAttempts, $retryDelay, function (RedisException $exception) {
-            $this->disconnect();
-
+        $attempts = 0;
+        $previousException = null;
+        while ($attempts <= $retryAttempts) {
             try {
-                $this->reconnectIfRedisIsUnavailableOrReadonly($exception);
+                return $callback();
             } catch (RedisException $exception) {
-                // Ignore when the creation of a new client gets an exception.
-                // If this exception isn't caught the retry will stop.
+                if (! $this->shouldRetryRedisException($exception)) {
+                    throw $exception;
+                }
+
+                if ($retryAttempts !== 0) {
+                    usleep($retryDelay * 1000);
+                }
+
+                $this->disconnect();
+
+                // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
+                // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
+                // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
+                try {
+                    $this->reconnect();
+                } catch (RedisException $exception) {
+                    // Ignore when the creation of a new client gets an exception.
+                    // If this exception isn't caught the retry will stop.
+                }
+
+                $previousException = $exception;
+                $attempts++;
             }
-        });
+        }
+
+        throw new RedisRetryException(sprintf('Reached the (re)connect limit of %d attempts.', $attempts), 0, $previousException);
     }
 
     /**
      * Inspects the given exception and reconnects the client if the reported error indicates that the server
      * went away or is in readonly mode, which may happen in case of a Redis Sentinel failover.
      */
-    private function reconnectIfRedisIsUnavailableOrReadonly(RedisException $exception): void
+    private function shouldRetryRedisException(RedisException $exception): bool
     {
         // We convert the exception message to lower-case in order to perform case-insensitive comparison.
         $exceptionMessage = strtolower($exception->getMessage());
@@ -218,14 +240,11 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         // Because we also match only partial exception messages, we cannot use in_array() at this point.
         foreach (self::ERROR_MESSAGES_INDICATING_UNAVAILABILITY as $errorMessage) {
             if (str_contains($exceptionMessage, $errorMessage)) {
-                // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
-                // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
-                // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
-                $this->reconnect();
-
-                return;
+                return true;
             }
         }
+
+        return false;
     }
 
     /**

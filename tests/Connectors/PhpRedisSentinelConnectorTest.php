@@ -6,7 +6,7 @@ namespace Namoshek\Redis\Sentinel\Tests\Connectors;
 
 use Illuminate\Redis\RedisManager;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
-use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
+use Namoshek\Redis\Sentinel\Exceptions\RedisRetryException;
 use Namoshek\Redis\Sentinel\Tests\TestCase;
 use Redis;
 use RedisException;
@@ -54,7 +54,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force the shutdown of a node, but avoid aborting the test case.
         try {
-            $connection->withoutRetries(fn (Redis $redis) => $redis->rawCommand('DEBUG', 'SEGFAULT'));
+            $connection->skipRetries(fn (Redis $redis) => $redis->rawCommand('DEBUG', 'SEGFAULT'));
         } catch (RedisException) {
             // Ignored on purpose.
         }
@@ -80,6 +80,40 @@ class PhpRedisSentinelConnectorTest extends TestCase
     /**
      * @throws RedisException
      */
+    public function test_no_retries_on_normal_exception(): void
+    {
+        /** @var RedisManager $redisManager */
+        $redisManager = $this->app->make('redis');
+
+        // Connect for the first time and remember the object hash of the connection.
+        /** @var PhpRedisSentinelConnection $connection */
+        $connection = $redisManager->connection('default');
+        $clientId = spl_object_hash($connection->client());
+
+        // Perform some random actions.
+        $connection->ping();
+        $connection->set('foo', 'bar');
+        $connection->get('foo');
+        $connection->del('foo');
+
+        // Force an exception, but avoid aborting the test case.
+        try {
+            $connection->transaction(fn (Redis $redis) => throw new RedisException('this exception should not be retried.'));
+        } catch (RedisException $e) {
+            self::assertNotInstanceOf(RedisRetryException::class, $e);
+
+            $connection->client()->discard();
+        }
+
+        $connection->set('foo', 'bar');
+
+        // Connect a second time and compare the object hash of this and the old connection.
+        self::assertSame($clientId, spl_object_hash($connection->client()));
+    }
+
+    /**
+     * @throws RedisException
+     */
     public function test_when_connection_goes_away_it_is_reestablished(): void
     {
         /** @var RedisManager $redisManager */
@@ -98,7 +132,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->withoutRetries(fn (Redis $redis) => throw new RedisException('went away'));
+            $connection->skipRetries(fn (Redis $redis) => throw new RedisException('went away'));
         } catch (RedisException) {
             // Ignored on purpose.
         }
@@ -128,7 +162,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->withoutRetries(fn (Redis $redis) => throw new RedisException('READONLY'));
+            $connection->skipRetries(fn (Redis $redis) => throw new RedisException('READONLY'));
         } catch (RedisException) {
             // Ignored on purpose.
         }
@@ -158,7 +192,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->withoutRetries(fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"));
+            $connection->skipRetries(fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"));
         } catch (RedisException) {
             // Ignored on purpose.
         }
