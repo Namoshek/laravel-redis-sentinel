@@ -8,8 +8,7 @@ namespace Namoshek\Redis\Sentinel\Connections;
 
 use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
-use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
-use Namoshek\Redis\Sentinel\Exceptions\RedisRetryException;
+use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
 use Redis;
 use RedisException;
 
@@ -106,17 +105,27 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     /**
      * {@inheritdoc}
      */
-    public function pipeline(?callable $callback = null): Redis|array
-    {
-        return $this->retryOnFailure(fn () => parent::pipeline($callback));
+    public function pipeline(
+        ?callable $callback = null,
+        ?int $retryAttempts = null,
+    ): Redis|array {
+        return $this->retryOnFailure(
+            fn () => parent::pipeline($callback),
+            $retryAttempts ?? $this->retryAttempts,
+        );
     }
 
     /**
      * {@inheritdoc}
      */
-    public function transaction(?callable $callback = null): Redis|array
-    {
-        return $this->retryOnFailure(fn () => parent::transaction($callback));
+    public function transaction(
+        ?callable $callback = null,
+        ?int $retryAttempts = null,
+    ): Redis|array {
+        return $this->retryOnFailure(
+            fn () => parent::transaction($callback),
+            $retryAttempts ?? $this->retryAttempts,
+        );
     }
 
     /**
@@ -124,7 +133,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      */
     public function evalsha($script, $numkeys, ...$arguments): mixed
     {
-        return $this->retryOnFailure(fn () => parent::evalsha($script, $numkeys, $arguments));
+        return $this->retryOnFailure(fn () => parent::evalsha($script, $numkeys, ...$arguments));
     }
 
     /**
@@ -162,17 +171,6 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     /**
      * {@inheritdoc}
      */
-    public function skipRetries(?callable $callback = null): Redis|array
-    {
-        return $this->retryOnFailure(
-            fn () => parent::transaction($callback),
-            $retryAttempts = 0,
-        );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function __call($method, $parameters): mixed
     {
         return $this->retryOnFailure(fn () => parent::__call(strtolower($method), $parameters));
@@ -183,8 +181,10 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      * to a Redis server.
      *
      * @param callable $callback The operation to execute.
-     * @param
+     * @param ?int $retryAttempts The number of times the retry is performed.
+     * @param ?int $retryDelay The time in milliseconds to wait before retrying again.
      * @return mixed The result of the first successful attempt.
+     * @throws RetryRedisException|RedisException
      */
     protected function retryOnFailure(
         callable $callback,
@@ -195,7 +195,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $retryDelay ??= $this->retryDelay;
 
         $attempts = 0;
-        $previousException = null;
+        $lastException = null;
         while ($attempts <= $retryAttempts) {
             try {
                 return $callback();
@@ -220,12 +220,12 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
                     // If this exception isn't caught the retry will stop.
                 }
 
-                $previousException = $exception;
+                $lastException = $exception;
                 $attempts++;
             }
         }
 
-        throw new RedisRetryException(sprintf('Reached the (re)connect limit of %d attempts.', $attempts), 0, $previousException);
+        throw new RetryRedisException(sprintf('Reached the (re)connect limit of %d attempts.', $attempts), 0, $lastException);
     }
 
     /**

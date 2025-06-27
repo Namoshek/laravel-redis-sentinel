@@ -6,7 +6,7 @@ namespace Namoshek\Redis\Sentinel\Tests\Connectors;
 
 use Illuminate\Redis\RedisManager;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
-use Namoshek\Redis\Sentinel\Exceptions\RedisRetryException;
+use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
 use Namoshek\Redis\Sentinel\Tests\TestCase;
 use Redis;
 use RedisException;
@@ -16,9 +16,6 @@ use RedisException;
  */
 class PhpRedisSentinelConnectorTest extends TestCase
 {
-    /**
-     * @throws RedisException
-     */
     public function test_connecting_to_redis_through_sentinel_without_password_works(): void
     {
         /** @var RedisManager $redisManager */
@@ -30,9 +27,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
         self::assertTrue($connection->ping());
     }
 
-    /**
-     * @throws RedisException
-     */
     public function test_retries_when_master_goes_away(): void
     {
         /** @var RedisManager $redisManager */
@@ -54,7 +48,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force the shutdown of a node, but avoid aborting the test case.
         try {
-            $connection->skipRetries(fn (Redis $redis) => $redis->rawCommand('DEBUG', 'SEGFAULT'));
+            $connection->client()->rawCommand('DEBUG', 'SEGFAULT');
         } catch (RedisException) {
             // Ignored on purpose.
         }
@@ -77,9 +71,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
         self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 
-    /**
-     * @throws RedisException
-     */
     public function test_no_retries_on_normal_exception(): void
     {
         /** @var RedisManager $redisManager */
@@ -100,8 +91,9 @@ class PhpRedisSentinelConnectorTest extends TestCase
         try {
             $connection->transaction(fn (Redis $redis) => throw new RedisException('this exception should not be retried.'));
         } catch (RedisException $e) {
-            self::assertNotInstanceOf(RedisRetryException::class, $e);
+            self::assertNotInstanceOf(RetryRedisException::class, $e);
 
+            // We need to discard the ->multi() in the transaction, otherwise other tests may fail.
             $connection->client()->discard();
         }
 
@@ -111,9 +103,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
         self::assertSame($clientId, spl_object_hash($connection->client()));
     }
 
-    /**
-     * @throws RedisException
-     */
     public function test_when_connection_goes_away_it_is_reestablished(): void
     {
         /** @var RedisManager $redisManager */
@@ -132,7 +121,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->skipRetries(fn (Redis $redis) => throw new RedisException('went away'));
+            $connection->transaction(
+                fn (Redis $redis) => throw new RedisException('went away'),
+                $retryAttempts = 0,
+            );
         } catch (RedisException) {
             // Ignored on purpose.
         }
@@ -141,9 +133,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
         self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 
-    /**
-     * @throws RedisException
-     */
     public function test_when_connection_becomes_readonly_it_is_reestablished(): void
     {
         /** @var RedisManager $redisManager */
@@ -162,7 +151,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->skipRetries(fn (Redis $redis) => throw new RedisException('READONLY'));
+            $connection->transaction(
+                fn (Redis $redis) => throw new RedisException('READONLY'),
+                $retryAttempts = 0,
+            );
         } catch (RedisException) {
             // Ignored on purpose.
         }
@@ -171,9 +163,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
         self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 
-    /**
-     * @throws RedisException
-     */
     public function test_when_connection_becomes_readonly_it_is_reestablished2(): void
     {
         /** @var RedisManager $redisManager */
@@ -192,7 +181,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Force an exception, but avoid aborting the test case.
         try {
-            $connection->skipRetries(fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"));
+            $connection->transaction(
+                fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"),
+                $retryAttempts = 0,
+            );
         } catch (RedisException) {
             // Ignored on purpose.
         }
