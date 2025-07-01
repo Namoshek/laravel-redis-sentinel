@@ -15,7 +15,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     /**
      * Returns a list of service providers required for the tests.
      *
-     * @param \Illuminate\Foundation\Application $app
+     * @param  \Illuminate\Foundation\Application  $app
      * @return string[]
      */
     protected function getPackageProviders($app): array
@@ -29,7 +29,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     /**
      * Define environment setup.
      *
-     * @param \Illuminate\Foundation\Application $app
+     * @param  \Illuminate\Foundation\Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)

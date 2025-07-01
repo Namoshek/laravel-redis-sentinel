@@ -33,8 +33,6 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      * Create a new PhpRedis connection.
      *
      * @param  \Redis  $client
-     * @param  callable|null  $connector
-     * @param  array  $config
      */
     public function __construct($client, ?callable $connector = null, array $config = [])
     {
@@ -204,10 +202,11 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      * Attempt to retry the provided operation when the client fails to connect
      * to a Redis server.
      *
-     * @param callable $callback The operation to execute.
-     * @param ?int $retryAttempts The number of times the retry is performed.
-     * @param ?int $retryDelay The time in milliseconds to wait before retrying again.
+     * @param  callable  $callback  The operation to execute.
+     * @param  ?int  $retryAttempts  The number of times the retry is performed.
+     * @param  ?int  $retryDelay  The time in milliseconds to wait before retrying again.
      * @return mixed The result of the first successful attempt.
+     *
      * @throws RetryRedisException|RedisException
      */
     protected function retryOnFailure(
