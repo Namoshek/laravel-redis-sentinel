@@ -45,8 +45,8 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
             'sentinel_password' => env('REDIS_SENTINEL_PASSWORD'),
             'sentinel_service' => env('REDIS_SENTINEL_SERVICE', 'mymaster'),
 
-            'retry_limit' => 20,
-            'retry_wait' => 1000,
+            'connector_retry_attempts' => 20,
+            'connector_retry_delay' => 1000,
         ]);
     }
 }

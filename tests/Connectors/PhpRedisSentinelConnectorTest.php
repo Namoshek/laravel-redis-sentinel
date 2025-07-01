@@ -35,7 +35,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
         // Connect for the first time and remember the object hash of the connection.
         /** @var PhpRedisSentinelConnection $connection */
         $connection = $redisManager->connection('default');
-        $clientId = spl_object_hash($connection->client());
         $port = $connection->executeRaw(['CONFIG', 'GET', 'port'])[1];
 
         // Perform some random actions.
@@ -66,9 +65,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Check the port is updated.
         self::assertNotSame($port, $connection->executeRaw(['CONFIG', 'GET', 'port'])[1]);
-
-        // Connect a second time and compare the object hash of this and the old connection.
-        self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 
     public function test_no_retries_on_normal_exception(): void

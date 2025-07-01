@@ -41,13 +41,13 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         parent::__construct($client, $connector, $config);
 
         // Set the retry limit.
-        if (isset($config['retry_attempts']) && is_numeric($config['retry_attempts'])) {
-            $this->retryAttempts = (int) $config['retry_attempts'];
+        if (isset($config['connector_retry_attempts']) && is_numeric($config['connector_retry_attempts'])) {
+            $this->retryAttempts = (int) $config['connector_retry_attempts'];
         }
 
         // Set the retry wait.
-        if (isset($config['retry_delay']) && is_numeric($config['retry_delay'])) {
-            $this->retryDelay = (int) $config['retry_delay'];
+        if (isset($config['connector_retry_delay']) && is_numeric($config['connector_retry_delay'])) {
+            $this->retryDelay = (int) $config['connector_retry_delay'];
         }
     }
 
@@ -72,6 +72,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function scan($cursor, $options = []): mixed
     {
@@ -80,6 +82,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function zscan($key, $cursor, $options = []): mixed
     {
@@ -88,6 +92,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function hscan($key, $cursor, $options = []): mixed
     {
@@ -96,6 +102,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function sscan($key, $cursor, $options = []): mixed
     {
@@ -104,6 +112,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function pipeline(
         ?callable $callback = null,
@@ -117,6 +127,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function transaction(
         ?callable $callback = null,
@@ -130,6 +142,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function evalsha($script, $numkeys, ...$arguments): mixed
     {
@@ -138,6 +152,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function subscribe($channels, Closure $callback): void
     {
@@ -146,6 +162,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function psubscribe($channels, Closure $callback): void
     {
@@ -154,6 +172,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function flushdb(): void
     {
@@ -162,6 +182,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function command($method, array $parameters = []): mixed
     {
@@ -170,6 +192,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
 
     /**
      * {@inheritdoc}
+     *
+     * @throws RetryRedisException
      */
     public function __call($method, $parameters): mixed
     {

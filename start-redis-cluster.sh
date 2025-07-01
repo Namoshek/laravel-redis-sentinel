@@ -42,6 +42,7 @@ TRUNCATE_LOGS="${TRUNCATE_LOGS:-yes}"
 CLEANUP="${CLEANUP:-yes}"
 SUPERVISE="${SUPERVISE:-yes}"
 LOGGING="${LOGGING:-no}"
+RESTART="${RESTART:-yes}"
 
 if [ -z "$REDIS_GROUP_1" ] && [ -z "$REDIS_GROUP_2" ] \
     && [ -z "$REDIS_GROUP_3" ] && [ -z "$REDIS_GROUP_4" ] \
@@ -49,8 +50,8 @@ if [ -z "$REDIS_GROUP_1" ] && [ -z "$REDIS_GROUP_2" ] \
     && [ -z "$REDIS_GROUP_7" ] && [ -z "$REDIS_GROUP_8" ] \
     && [ -z "$REDIS_GROUP_9" ]
 then
-    REDIS_GROUP_1='service1 6380-6382'
-    REDIS_GROUP_2='service2 6383-6385'
+    REDIS_GROUP_1='service1 6379-6381'
+    REDIS_GROUP_2='service2 6382-6384'
 fi
 
 if [ "$*" = 'config' ]; then
@@ -104,6 +105,7 @@ Options (from environment variables):
   CLEANUP           Remove server-created files except logs (default: "yes").
   SUPERVISE         Stay in foreground (default: "yes").
   LOGGING           Output server logs in supervised mode (default: "no").
+  RESTART           Restart server instances when getting stopped (default: "yes").
 
 With the default options, this tool creates the working directory in ./cluster
 and starts three Sentinels and two groups of three Redis servers. The script
@@ -154,12 +156,13 @@ fi
 start_redis() {
     printf 'Starting Redis server on port %d (%s)...\n' "$2" "$1" || return $?
 
-    # assert_not_listening "$2"
+    assert_not_listening "$2"
 
     if is_true "$TRUNCATE_LOGS"; then
         printf '' > "$WORKDIR/redis-$2.log"
     fi
 
+    # Optional master_port (only set on initial cluster start)
     master_port="$3"
 
     set -- --port "$2" \
@@ -171,7 +174,7 @@ start_redis() {
         --dbfilename "dump-$2.rdb" \
         --appendfilename "appendonly-$2.aof"
 
-    if [ "$2" -ne "$master_port" ]; then
+    if [ -n "$master_port" ] && [ "$2" -ne "$master_port" ]; then
         set -- "$@" --slaveof 127.0.0.1 "$master_port"
     fi
 
@@ -335,6 +338,46 @@ wait_for_servers() {
     printf 'ERROR: No servers running.\n' >&2
 }
 
+monitor_and_restart() {
+    while true; do
+        for port in $Redis_Ports; do
+            # Check if Redis is alive using redis-cli
+            if ! redis-cli -p "$port" PING > /dev/null 2>&1; then
+                echo "Redis on port $port is DOWN. Attempting restart after the Sentinel failover has kicked in..."
+
+                # Wait till the failover kicks in
+                sleep $(echo "scale=2; $DOWN_AFTER / 1000 + 2" | bc)
+
+                restarted=0
+                for i in 1 2 3 4 5 6 7 8 9; do
+                    eval group=\$REDIS_GROUP_$i
+                    [ -n "$group" ] || continue
+
+                    group_name=$(echo "$group" | cut -d' ' -f1)
+                    port_spec=$(echo "$group" | cut -d' ' -f2)
+                    ports=$(parse_ports "$port_spec")
+
+                    for p in $ports; do
+                        if [ "$p" = "$port" ]; then
+                            echo "Restarting Redis on port $port (group: $group_name)..."
+                            rm -f "$WORKDIR/redis-$port.pid"
+                            start_redis "$group_name" "$port"
+                            restarted=1
+                            break 2
+                        fi
+                    done
+                done
+
+                if [ "$restarted" -ne 1 ]; then
+                    echo "ERROR: Could not determine how to restart Redis on port $port"
+                fi
+            fi
+        done
+
+        sleep 2
+    done
+}
+
 verify_replication() {
     master_port="${1%% *}"
     replica_count="$(count_items "${1#* }")"
@@ -489,7 +532,6 @@ unset Verify_Pids
 verify_quorum || terminate $?
 
 if is_true "$SUPERVISE"; then
-    printf 'Press Ctrl-C to stop...\n'
     trap 'printf "Shutting down...\n"; terminate 0' INT TERM
 
     server_pids="$(cat "$WORKDIR/"*.pid)" || exit $?
@@ -498,5 +540,14 @@ if is_true "$SUPERVISE"; then
         start_logger
     fi
 
-    wait_for_servers $server_pids
+    if is_true "$RESTART"; then
+        echo 'Monitoring Redis servers for unexpected termination...'
+        printf 'Press Ctrl-C to stop...\n'
+
+        monitor_and_restart
+    else
+        printf 'Press Ctrl-C to stop...\n'
+
+        wait_for_servers $server_pids
+    fi
 fi
