@@ -172,7 +172,8 @@ start_redis() {
         --pidfile "redis-$2.pid" \
         --logfile "redis-$2.log" \
         --dbfilename "dump-$2.rdb" \
-        --appendfilename "appendonly-$2.aof"
+        --appendfilename "appendonly-$2.aof" \
+        --enable-debug-command yes
 
     if [ -n "$master_port" ] && [ "$2" -ne "$master_port" ]; then
         set -- "$@" --slaveof 127.0.0.1 "$master_port"
