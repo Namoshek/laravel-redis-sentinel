@@ -8,6 +8,7 @@ namespace Namoshek\Redis\Sentinel\Connections;
 
 use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
+use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
 use Redis;
 use RedisException;
@@ -22,13 +23,13 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      * The number of times the client attempts to retry a command when it fails
      * to connect to a Redis instance behind Sentinel.
      */
-    protected int $retryAttempts = 20;
+    protected int $retryAttempts;
 
     /**
      * The time in milliseconds to wait before the client retries a failed
      * command.
      */
-    protected int $retryDelay = 1000;
+    protected int $retryDelay;
 
     /**
      * Create a new PhpRedis connection.
@@ -39,35 +40,14 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     {
         parent::__construct($client, $connector, $config);
 
-        // Set the retry limit.
-        if (isset($config['connector_retry_attempts']) && is_numeric($config['connector_retry_attempts'])) {
-            $this->retryAttempts = (int) $config['connector_retry_attempts'];
-        }
+        $this->retryAttempts = is_numeric($config['connector_retry_attempts'] ?? null)
+            ? (int) $config['connector_retry_attempts']
+            : PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_ATTEMPTS;
 
-        // Set the retry wait.
-        if (isset($config['connector_retry_delay']) && is_numeric($config['connector_retry_delay'])) {
-            $this->retryDelay = (int) $config['connector_retry_delay'];
-        }
+        $this->retryDelay = is_numeric($config['connector_retry_delay'] ?? null)
+            ? (int) $config['connector_retry_delay']
+            : PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_DELAY;
     }
-
-    /**
-     * The following array contains all exception message parts which are interpreted as a connection loss or
-     * another unavailability of Redis.
-     */
-    private const ERROR_MESSAGES_INDICATING_UNAVAILABILITY = [
-        'connection closed',
-        'connection refused',
-        'connection lost',
-        'failed while reconnecting',
-        'is loading the dataset in memory',
-        'php_network_getaddresses',
-        'read error on connection',
-        'socket',
-        'went away',
-        'loading',
-        'readonly',
-        "can't write against a read only replica",
-    ];
 
     /**
      * {@inheritdoc}
@@ -218,27 +198,18 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $retryAttempts ??= $this->retryAttempts;
         $retryDelay ??= $this->retryDelay;
 
-        $attempts = 0;
-        $lastException = null;
-        while ($attempts <= $retryAttempts) {
-            try {
-                return $callback();
-            } catch (RedisException $exception) {
-                if (! $this->shouldRetryRedisException($exception)) {
-                    throw $exception;
-                }
-
-                if ($retryAttempts !== 0) {
-                    usleep($retryDelay * 1000);
-                }
-
-                // The name or service may not be known anymore, if this is the case we ignore the exception.
+        return PhpRedisSentinelConnector::retryOnFailure(
+            $callback,
+            $retryAttempts,
+            $retryDelay,
+            failureCallback: function () {
                 try {
                     $this->disconnect();
+                } catch (RedisException $e) {
+                    // Ignore when the creation of a new client gets an exception.
+                    // If this exception isn't caught the retry will stop.
                 } catch (Throwable $e) {
-                    if (str_contains($e->getMessage(), 'getaddrinfo') || str_contains($e->getMessage(), 'Name or service not known')) {
-                        // Ignore name resolution errors.
-                    } else {
+                    if (! PhpRedisSentinelConnector::isNameResolutionException($e)) {
                         throw $e;
                     }
                 }
@@ -248,36 +219,16 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
                 // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
                 try {
                     $this->reconnect();
-                } catch (RedisException $exception) {
+                } catch (RedisException $e) {
                     // Ignore when the creation of a new client gets an exception.
                     // If this exception isn't caught the retry will stop.
+                } catch (Throwable $e) {
+                    if (! PhpRedisSentinelConnector::isNameResolutionException($e)) {
+                        throw $e;
+                    }
                 }
-
-                $lastException = $exception;
-                $attempts++;
             }
-        }
-
-        throw new RetryRedisException(sprintf('Reached the (re)connect limit of %d attempts.', $attempts), 0, $lastException);
-    }
-
-    /**
-     * Inspects the given exception and reconnects the client if the reported error indicates that the server
-     * went away or is in readonly mode, which may happen in case of a Redis Sentinel failover.
-     */
-    private function shouldRetryRedisException(RedisException $exception): bool
-    {
-        // We convert the exception message to lower-case in order to perform case-insensitive comparison.
-        $exceptionMessage = strtolower($exception->getMessage());
-
-        // Because we also match only partial exception messages, we cannot use in_array() at this point.
-        foreach (self::ERROR_MESSAGES_INDICATING_UNAVAILABILITY as $errorMessage) {
-            if (str_contains($exceptionMessage, $errorMessage)) {
-                return true;
-            }
-        }
-
-        return false;
+        );
     }
 
     /**
