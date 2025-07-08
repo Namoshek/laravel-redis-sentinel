@@ -11,6 +11,7 @@ use Illuminate\Redis\Connections\PhpRedisConnection;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
 use Redis;
 use RedisException;
+use Throwable;
 
 /**
  * The connection to Redis after connecting through a Sentinel using the PhpRedis extension.
@@ -231,7 +232,16 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
                     usleep($retryDelay * 1000);
                 }
 
-                $this->disconnect();
+                // The name or service may not be known anymore, if this is the case we ignore the exception.
+                try {
+                    $this->disconnect();
+                } catch (Throwable $e) {
+                    if (str_contains($e->getMessage(), 'getaddrinfo') || str_contains($e->getMessage(), 'Name or service not known')) {
+                        // Ignore name resolution errors.
+                    } else {
+                        throw $e;
+                    }
+                }
 
                 // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
                 // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
