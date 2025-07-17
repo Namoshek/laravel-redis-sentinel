@@ -8,7 +8,7 @@ use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
 use RedisException;
 use Throwable;
 
-class RetryService
+class RetryManager
 {
     /**
      * The following array contains all exception message parts which are interpreted as a connection loss or

@@ -10,7 +10,7 @@ use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
-use Namoshek\Redis\Sentinel\Services\RetryService;
+use Namoshek\Redis\Sentinel\Services\RetryManager;
 use Redis;
 use RedisException;
 use Throwable;
@@ -41,7 +41,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $client,
         ?callable $connector,
         array $config,
-        protected RetryService $retryService,
+        protected RetryManager $retryManager,
     ) {
         parent::__construct($client, $connector, $config);
 
@@ -203,7 +203,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $retryAttempts ??= $this->retryAttempts;
         $retryDelay ??= $this->retryDelay;
 
-        return $this->retryService->retryOnFailure(
+        return $this->retryManager->retryOnFailure(
             $callback,
             $retryAttempts,
             $retryDelay,
@@ -222,7 +222,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
             // Ignore when the creation of a new client gets an exception.
             // If this exception isn't caught the retry will stop.
         } catch (Throwable $e) {
-            if (! $this->retryService->isNameResolutionException($e)) {
+            if (! $this->retryManager->isNameResolutionException($e)) {
                 throw $e;
             }
         }
@@ -236,7 +236,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
             // Ignore when the creation of a new client gets an exception.
             // If this exception isn't caught the retry will stop.
         } catch (Throwable $e) {
-            if (! $this->retryService->isNameResolutionException($e)) {
+            if (! $this->retryManager->isNameResolutionException($e)) {
                 throw $e;
             }
         }

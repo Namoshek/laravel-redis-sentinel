@@ -8,7 +8,7 @@ use Illuminate\Redis\Connectors\PhpRedisConnector;
 use Illuminate\Support\Arr;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Exceptions\ConfigurationException;
-use Namoshek\Redis\Sentinel\Services\RetryService;
+use Namoshek\Redis\Sentinel\Services\RetryManager;
 use Redis;
 use RedisException;
 use RedisSentinel;
@@ -19,7 +19,7 @@ use RedisSentinel;
 class PhpRedisSentinelConnector extends PhpRedisConnector
 {
     public function __construct(
-        protected RetryService $retryService,
+        protected RetryManager $retryManager,
     ) {
         //
     }
@@ -59,13 +59,13 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             ? (int) $config['connector_retry_delay']
             : self::DEFAULT_CONNECTOR_RETRY_DELAY;
 
-        $connection = $this->retryService->retryOnFailure(
+        $connection = $this->retryManager->retryOnFailure(
             fn () => $connector(),
             $retryAttempts,
             $retryDelay,
         );
 
-        return new PhpRedisSentinelConnection($connection, $connector, $config, $this->retryService);
+        return new PhpRedisSentinelConnection($connection, $connector, $config, $this->retryManager);
     }
 
     /**

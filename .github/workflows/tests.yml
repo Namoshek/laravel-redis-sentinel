@@ -4,14 +4,12 @@ on:
   push:
     branches:
       - master
-      - retry-feature
   pull_request:
     types: [opened, synchronize, reopened]
-  workflow_dispatch:
 
 jobs:
   test-all:
-    name: Test PHP ${{ matrix.php-version }}
+    name: Test PHP ${{ matrix.php-version }}, Redis ${{ matrix.redis-version }}
 
     runs-on: ${{ matrix.operating-system }}
 
@@ -19,44 +17,31 @@ jobs:
       matrix:
         operating-system: [ubuntu-latest]
         php-version: ['8.2', '8.3', '8.4']
+        redis-version: ['7.4.5', '8.0.3']
         include:
           - operating-system: 'ubuntu-latest'
             php-version: '8.4'
+            redis-version: '8.0.3'
             run-sonarqube-analysis: true
-
-    services:
-      redis:
-        image: bitnami/redis:7.4-debian-12
-        ports:
-          - 6379:6379
-        env:
-          ALLOW_EMPTY_PASSWORD: 'yes'
-          ENABLE_DEBUG_COMMAND: 'yes'
-        options: >-
-          --health-cmd "redis-cli -p 6379 ping"
-          --health-start-period 5s
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis-sentinel:
-        image: bitnami/redis-sentinel:7.4-debian-12
-        ports:
-          - 26379:26379
-        env:
-          REDIS_MASTER_HOST: redis
-          REDIS_MASTER_SET: mymaster
-          REDIS_SENTINEL_QUORUM: 1
-        options: >-
-          --health-cmd "redis-cli -p 26379 ping"
-          --health-start-period 5s
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Install Redis
+        run: |
+          wget http://download.redis.io/releases/redis-${{ matrix.redis-version }}.tar.gz
+          tar xzf redis-${{ matrix.redis-version }}.tar.gz
+          cd redis-${{ matrix.redis-version }}
+          make
+          sudo make install
+
+      - name: Make Redis cluster script executable
+        run: chmod +x ./start-redis-cluster.sh
+
+      - name: Start Redis cluster
+        run: ./start-redis-cluster.sh &
 
       - name: Setup PHPUnit
         uses: shivammathur/setup-php@v2
@@ -90,7 +75,7 @@ jobs:
         env:
           REDIS_SENTINEL_HOST: 127.0.0.1
           REDIS_SENTINEL_PORT: 26379
-          REDIS_SENTINEL_SERVICE: mymaster
+          REDIS_SENTINEL_SERVICE: service1
 
       - name: Prepare paths for SonarQube analysis
         if: ${{ matrix.run-sonarqube-analysis && !github.event.pull_request.head.repo.fork }}
