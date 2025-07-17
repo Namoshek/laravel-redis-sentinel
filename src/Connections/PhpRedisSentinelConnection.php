@@ -10,6 +10,7 @@ use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
+use Namoshek\Redis\Sentinel\Services\RetryService;
 use Redis;
 use RedisException;
 use Throwable;
@@ -36,8 +37,12 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      *
      * @param  \Redis  $client
      */
-    public function __construct($client, ?callable $connector = null, array $config = [])
-    {
+    public function __construct(
+        $client,
+        ?callable $connector = null,
+        array $config = [],
+        protected RetryService $retryService,
+    ) {
         parent::__construct($client, $connector, $config);
 
         $this->retryAttempts = is_numeric($config['connector_retry_attempts'] ?? null)
@@ -198,37 +203,43 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $retryAttempts ??= $this->retryAttempts;
         $retryDelay ??= $this->retryDelay;
 
-        return PhpRedisSentinelConnector::retryOnFailure(
+        return $this->retryService->retryOnFailure(
             $callback,
             $retryAttempts,
             $retryDelay,
-            failureCallback: function () {
-                try {
-                    $this->disconnect();
-                } catch (RedisException $e) {
-                    // Ignore when the creation of a new client gets an exception.
-                    // If this exception isn't caught the retry will stop.
-                } catch (Throwable $e) {
-                    if (! PhpRedisSentinelConnector::isNameResolutionException($e)) {
-                        throw $e;
-                    }
-                }
-
-                // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
-                // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
-                // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
-                try {
-                    $this->reconnect();
-                } catch (RedisException $e) {
-                    // Ignore when the creation of a new client gets an exception.
-                    // If this exception isn't caught the retry will stop.
-                } catch (Throwable $e) {
-                    if (! PhpRedisSentinelConnector::isNameResolutionException($e)) {
-                        throw $e;
-                    }
-                }
-            }
+            fn () => $this->forceReconnect(),
         );
+    }
+
+    /**
+     * Force a reconnect, we ignore naming resolution exceptions.
+     */
+    protected function forceReconnect(): void
+    {
+        try {
+            $this->disconnect();
+        } catch (RedisException $e) {
+            // Ignore when the creation of a new client gets an exception.
+            // If this exception isn't caught the retry will stop.
+        } catch (Throwable $e) {
+            if (! $this->retryService->isNameResolutionException($e)) {
+                throw $e;
+            }
+        }
+
+        // Here we reconnect through Redis Sentinel if we lost connection to the server or if another unavailability occurred.
+        // We may actually reconnect to the same, broken server. But after a failover occured, we should be ok.
+        // It may take a moment until the Sentinel returns the new master, so this may be triggered multiple times.
+        try {
+            $this->reconnect();
+        } catch (RedisException $e) {
+            // Ignore when the creation of a new client gets an exception.
+            // If this exception isn't caught the retry will stop.
+        } catch (Throwable $e) {
+            if (! $this->retryService->isNameResolutionException($e)) {
+                throw $e;
+            }
+        }
     }
 
     /**

@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Namoshek\Redis\Sentinel\Tests\Connectors;
 
 use Illuminate\Redis\RedisManager;
+use Mockery;
+use Mockery\MockInterface;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
+use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
+use Namoshek\Redis\Sentinel\Services\RetryService;
 use Namoshek\Redis\Sentinel\Tests\TestCase;
 use Redis;
 use RedisException;
@@ -16,6 +20,8 @@ use RedisException;
  */
 class PhpRedisSentinelConnectorTest extends TestCase
 {
+    // @TODO add test for first connection retries when the cluster is not accessible on the first try.
+
     public function test_connecting_to_redis_through_sentinel_without_password_works(): void
     {
         /** @var RedisManager $redisManager */
@@ -27,8 +33,75 @@ class PhpRedisSentinelConnectorTest extends TestCase
         self::assertTrue($connection->ping());
     }
 
+    // public function test_retries_when_master_goes_away(): void
+    // {
+    //     $connectionSpy = null;
+
+    //     $retryService = $this->app->make(RetryService::class);
+
+    //     $connectorPartialMock = Mockery::mock(PhpRedisSentinelConnector::class, [$retryService])->makePartial();
+
+    //     // Override `connect` to call the real method, then wrap the returned connection in a spy
+    //     $connectorPartialMock->shouldReceive('connect')
+    //         ->andReturnUsing(function ($config, $options) use (&$connectionSpy, $retryService) {
+    //             // Call the real method manually
+    //             $realConnector = new PhpRedisSentinelConnector($retryService);
+    //             $connection = $realConnector->connect($config, $options);
+
+    //             // Spy on the real connection
+    //             $connectionSpy = Mockery::spy($connection);
+
+    //             return $connectionSpy;
+    //         });
+
+
+    //     $this->app->singleton(PhpRedisSentinelConnector::class, fn () => $connectorPartialMock);
+
+    //     /** @var RedisManager $redisManager */
+    //     $redisManager = $this->app->make('redis');
+
+    //     // Connect for the first time and remember the object hash of the connection.
+    //     /** @var PhpRedisSentinelConnection $connection */
+    //     $connection = $redisManager->connection('default');
+    //     $port = $connection->executeRaw(['CONFIG', 'GET', 'port'])[1];
+
+    //     // Perform some random actions.
+    //     $connection->set('foo', 'bar');
+    //     $connection->get('foo');
+    //     $connection->del('foo');
+
+    //     $connectionSpy->shouldHaveReceived('set')->once();
+
+    //     // Force the shutdown of a node, but avoid aborting the test case.
+    //     try {
+    //         $connection->client()->rawCommand('DEBUG', 'SEGFAULT');
+    //     } catch (RedisException) {
+    //         // Ignored on purpose.
+    //     }
+
+    //     // Set and check if a new Redis instance is connected.
+    //     $connection->set('foo', 'bar');
+    //     $connection->get('foo');
+    //     $connection->del('foo');
+
+    //     $connectionSpy->shouldHaveReceived('set')->between(3, 19);
+
+    //     // /** @var \Mockery\VerificationDirector $expectation */
+    //     // $expectation = $spy->shouldHaveReceived('shouldRetry');
+
+    //     // // It should be retried at least 3 times as there is some time before
+    //     // // sentinel marks the node as down and kicks in the failover.
+    //     // $expectation->between(3, PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_ATTEMPTS);
+
+    //     // Check the port is updated.
+    //     self::assertNotSame($port, $connection->executeRaw(['CONFIG', 'GET', 'port'])[1]);
+    // }
+
     public function test_retries_when_master_goes_away(): void
     {
+        /** @var \Mockery\MockInterface $spy */
+        $spy = $this->spy(RetryService::class, fn (MockInterface $mock) => $mock->makePartial());
+
         /** @var RedisManager $redisManager */
         $redisManager = $this->app->make('redis');
 
@@ -38,12 +111,11 @@ class PhpRedisSentinelConnectorTest extends TestCase
         $port = $connection->executeRaw(['CONFIG', 'GET', 'port'])[1];
 
         // Perform some random actions.
-        $start = time();
         $connection->set('foo', 'bar');
-        $durationWithoutSegfault = time() - $start;
-
         $connection->get('foo');
         $connection->del('foo');
+
+        $spy->shouldNotHaveReceived('shouldRetry');
 
         // Force the shutdown of a node, but avoid aborting the test case.
         try {
@@ -53,15 +125,16 @@ class PhpRedisSentinelConnectorTest extends TestCase
         }
 
         // Set and check if a new Redis instance is connected.
-        $start = time();
         $connection->set('foo', 'bar');
-        $durationWithSegfault = time() - $start;
-
         $connection->get('foo');
         $connection->del('foo');
 
-        self::assertEquals(0, $durationWithoutSegfault);
-        self::assertGreaterThan(1, $durationWithSegfault);
+        /** @var \Mockery\VerificationDirector $expectation */
+        $expectation = $spy->shouldHaveReceived('shouldRetry');
+
+        // It should be retried at least 3 times as there is some time before
+        // sentinel marks the node as down and kicks in the failover.
+        $expectation->between(3, PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_ATTEMPTS);
 
         // Check the port is updated.
         self::assertNotSame($port, $connection->executeRaw(['CONFIG', 'GET', 'port'])[1]);
