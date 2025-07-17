@@ -54,7 +54,6 @@ class PhpRedisSentinelConnectorTest extends TestCase
     //             return $connectionSpy;
     //         });
 
-
     //     $this->app->singleton(PhpRedisSentinelConnector::class, fn () => $connectorPartialMock);
 
     //     /** @var RedisManager $redisManager */

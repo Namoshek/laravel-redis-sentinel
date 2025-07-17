@@ -39,8 +39,8 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
      */
     public function __construct(
         $client,
-        ?callable $connector = null,
-        array $config = [],
+        ?callable $connector,
+        array $config,
         protected RetryService $retryService,
     ) {
         parent::__construct($client, $connector, $config);
