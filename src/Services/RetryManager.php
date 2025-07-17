@@ -87,7 +87,11 @@ class RetryManager
             }
         }
 
-        throw new RetryRedisException(sprintf('Reached the (re)connect limit of %d attempts.', $retryAttempts), 0, $lastException);
+        throw new RetryRedisException(
+            sprintf('Reached the (re)connect limit of %d attempts.', $retryAttempts),
+            0,
+            $lastException,
+        );
     }
 
     /**
