@@ -207,7 +207,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
             $callback,
             $retryAttempts,
             $retryDelay,
-            fn () => $this->forceReconnect(),
+            failureCallback: fn () => $this->forceReconnect(),
         );
     }
 

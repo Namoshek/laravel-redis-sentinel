@@ -56,11 +56,17 @@ class RetryManager
         int $retryDelay,
         ?callable $failureCallback = null,
     ): mixed {
-        $attempts = 0;
         $lastException = null;
+
         for ($currentAttempt = 0; $currentAttempt <= $retryAttempts; $currentAttempt++) {
             try {
-                return $callback();
+                // We directly return the callback on the first attempt.
+                if ($currentAttempt === 0) {
+                    return $callback();
+                }
+
+                // Wrap the callback to distinguish them from the first attempt.
+                return $this->retry($callback);
             } catch (Throwable $exception) {
                 // Check if we should retry this exception.
                 if (! $this->shouldRetry($exception)) {
@@ -81,7 +87,15 @@ class RetryManager
             }
         }
 
-        throw new RetryRedisException(sprintf('Reached the (re)connect limit of %d attempts.', $attempts), 0, $lastException);
+        throw new RetryRedisException(sprintf('Reached the (re)connect limit of %d attempts.', $retryAttempts), 0, $lastException);
+    }
+
+    /**
+     * Perform as retry when it is a second attempt. This makes testing easier.
+     */
+    public function retry(callable $callback): mixed
+    {
+        return $callback();
     }
 
     /**
