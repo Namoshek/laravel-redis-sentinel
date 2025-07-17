@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         operating-system: [ubuntu-latest]
-        php-version: ['8.1', '8.2', '8.3', '8.4']
+        php-version: ['8.2', '8.3', '8.4']
         include:
           - operating-system: 'ubuntu-latest'
             php-version: '8.4'
@@ -31,13 +31,13 @@ jobs:
           - 6379:6379
         env:
           ALLOW_EMPTY_PASSWORD: 'yes'
+          ENABLE_DEBUG_COMMAND: 'yes'
         options: >-
           --health-cmd "redis-cli -p 6379 ping"
           --health-start-period 5s
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-          --enable-debug-command yes
       redis-sentinel:
         image: bitnami/redis-sentinel:7.4-debian-12
         ports:
