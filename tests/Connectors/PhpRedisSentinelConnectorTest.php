@@ -24,8 +24,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
     public function test_connecting_to_redis_through_sentinel_without_password_works(): void
     {
         $connection = $this->getRedisConnection();
+        $serverId = $this->extractServerId($connection->executeRaw(['INFO', 'server']));
 
         self::assertTrue($connection->ping());
+        self::assertSame($serverId, $this->extractServerId($connection->executeRaw(['INFO', 'server'])));
     }
 
     public function test_initial_connect_to_redis_with_a_failing_node(): void
@@ -75,7 +77,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Connect for the first time and remember the object hash of the connection.
         $connection = $this->getRedisConnection();
-        $port = $connection->executeRaw(['CONFIG', 'GET', 'port'])[1];
+        $serverId = $this->extractServerId($connection->executeRaw(['INFO', 'server']));
 
         // Perform some random actions.
         $connection->set('foo', 'bar');
@@ -103,8 +105,8 @@ class PhpRedisSentinelConnectorTest extends TestCase
         // sentinel marks the node as down and kicks in the failover.
         $expectation->between(3, PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_ATTEMPTS);
 
-        // Check the port is updated.
-        self::assertNotSame($port, $connection->executeRaw(['CONFIG', 'GET', 'port'])[1]);
+        // Check the server id is updated.
+        self::assertNotSame($serverId, $this->extractServerId($connection->executeRaw(['INFO', 'server'])));
     }
 
     public function test_no_retries_on_normal_exception(): void
@@ -210,6 +212,18 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         // Connect a second time and compare the object hash of this and the old connection.
         self::assertNotSame($clientId, spl_object_hash($connection->client()));
+    }
+
+    /**
+     * Extract the run_id from the server info block.
+     */
+    private function extractServerId(string $serverInfo): ?string
+    {
+        if (preg_match('/^run_id:(.+)$/m', $serverInfo, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return null;
     }
 
     /**

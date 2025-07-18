@@ -8,9 +8,8 @@ namespace Namoshek\Redis\Sentinel\Connections;
 
 use Closure;
 use Illuminate\Redis\Connections\PhpRedisConnection;
-use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
-use Namoshek\Redis\Sentinel\Services\RetryManager;
+use Namoshek\Redis\Sentinel\Services\RetryContext;
 use Redis;
 use RedisException;
 use Throwable;
@@ -21,18 +20,6 @@ use Throwable;
 class PhpRedisSentinelConnection extends PhpRedisConnection
 {
     /**
-     * The number of times the client attempts to retry a command when it fails
-     * to connect to a Redis instance behind Sentinel.
-     */
-    protected int $retryAttempts;
-
-    /**
-     * The time in milliseconds to wait before the client retries a failed
-     * command.
-     */
-    protected int $retryDelay;
-
-    /**
      * Create a new PhpRedis connection.
      *
      * @param  \Redis  $client
@@ -41,17 +28,9 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         $client,
         ?callable $connector,
         array $config,
-        protected RetryManager $retryManager,
+        protected RetryContext $retryContext,
     ) {
         parent::__construct($client, $connector, $config);
-
-        $this->retryAttempts = is_numeric($config['connector_retry_attempts'] ?? null)
-            ? (int) $config['connector_retry_attempts']
-            : PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_ATTEMPTS;
-
-        $this->retryDelay = is_numeric($config['connector_retry_delay'] ?? null)
-            ? (int) $config['connector_retry_delay']
-            : PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_DELAY;
     }
 
     /**
@@ -105,7 +84,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     ): Redis|array {
         return $this->retryOnFailure(
             fn () => parent::pipeline($callback),
-            $retryAttempts ?? $this->retryAttempts,
+            $retryAttempts,
         );
     }
 
@@ -120,7 +99,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     ): Redis|array {
         return $this->retryOnFailure(
             fn () => parent::transaction($callback),
-            $retryAttempts ?? $this->retryAttempts,
+            $retryAttempts,
         );
     }
 
@@ -200,10 +179,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
         ?int $retryAttempts = null,
         ?int $retryDelay = null,
     ): mixed {
-        $retryAttempts ??= $this->retryAttempts;
-        $retryDelay ??= $this->retryDelay;
-
-        return $this->retryManager->retryOnFailure(
+        return $this->retryContext->retryOnFailure(
             $callback,
             $retryAttempts,
             $retryDelay,
@@ -222,7 +198,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
             // Ignore when the creation of a new client gets an exception.
             // If this exception isn't caught the retry will stop.
         } catch (Throwable $e) {
-            if (! $this->retryManager->isNameResolutionException($e)) {
+            if (! $this->retryContext->manager()->isNameResolutionException($e)) {
                 throw $e;
             }
         }
@@ -236,7 +212,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
             // Ignore when the creation of a new client gets an exception.
             // If this exception isn't caught the retry will stop.
         } catch (Throwable $e) {
-            if (! $this->retryManager->isNameResolutionException($e)) {
+            if (! $this->retryContext->manager()->isNameResolutionException($e)) {
                 throw $e;
             }
         }
