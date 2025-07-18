@@ -55,6 +55,10 @@ To use the Redis Sentinel driver, the `redis` section in `config/database.php` n
         'sentinel_read_timeout' => (float) env('REDIS_SENTINEL_READ_TIMEOUT', 0),
         'sentinel_username' => env('REDIS_SENTINEL_USERNAME'),
         'sentinel_password' => env('REDIS_SENTINEL_PASSWORD'),
+
+        'connector_retry_attempts' => env('REDIS_CONNECTOR_RETRY_ATTEMPTS'),
+        'connector_retry_delay' => env('REDIS_CONNECTOR_RETRY_DELAY'),
+
         'password' => env('REDIS_PASSWORD'),
         'database' => (int) env('REDIS_DB', 0),
     ]

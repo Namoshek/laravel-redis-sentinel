@@ -15,14 +15,14 @@
         }
     ],
     "require": {
-        "php": "^8.1",
+        "php": "^8.2",
         "ext-redis": "*",
         "illuminate/contracts": "^8.0|^9.0|^10.0|^11.0|^12.0",
         "illuminate/redis": "^8.0|^9.0|^10.0|^11.0|^12.0",
         "illuminate/support": "^8.0|^9.0|^10.0|^11.0|^12.0"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.0",
+        "laravel/pint": "^1.22",
         "orchestra/testbench": "^6.0|^7.0|^8.0|^9.0|^10.0"
     },
     "scripts": {
@@ -30,9 +30,9 @@
             "@test:cs",
             "@test:unit"
         ],
-        "test:cs": "PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --dry-run --diff --ansi",
+        "test:cs": "vendor/bin/pint -v",
         "test:unit": "vendor/bin/phpunit --testdox --log-junit=phpunit.report-junit.xml --coverage-clover=phpunit.coverage-clover.xml --coverage-text",
-        "fix:cs": "PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --diff --ansi"
+        "fix:cs": "vendor/bin/pint -v"
     },
     "autoload": {
         "psr-4": {

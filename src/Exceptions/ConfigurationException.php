@@ -9,4 +9,5 @@ namespace Namoshek\Redis\Sentinel\Exceptions;
  */
 class ConfigurationException extends \RuntimeException
 {
+    //
 }

@@ -8,6 +8,8 @@ use Illuminate\Redis\Connectors\PhpRedisConnector;
 use Illuminate\Support\Arr;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Exceptions\ConfigurationException;
+use Namoshek\Redis\Sentinel\Services\RetryContext;
+use Namoshek\Redis\Sentinel\Services\RetryManager;
 use Redis;
 use RedisException;
 use RedisSentinel;
@@ -17,6 +19,27 @@ use RedisSentinel;
  */
 class PhpRedisSentinelConnector extends PhpRedisConnector
 {
+    /**
+     * The default of times the client attempts to retry a command when it fails
+     * to connect to a Redis instance behind Sentinel.
+     */
+    public const DEFAULT_CONNECTOR_RETRY_ATTEMPTS = 20;
+
+    /**
+     * The default time in milliseconds to wait before the client retries a failed
+     * command.
+     */
+    public const DEFAULT_CONNECTOR_RETRY_DELAY = 1000;
+
+    /**
+     * Setup the connector.
+     */
+    public function __construct(
+        protected RetryManager $retryManager,
+    ) {
+        //
+    }
+
     /**
      * {@inheritdoc}
      *
@@ -32,7 +55,19 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             ));
         };
 
-        return new PhpRedisSentinelConnection($connector(), $connector, $config);
+        $retryAttempts = is_numeric($config['connector_retry_attempts'] ?? null)
+            ? (int) $config['connector_retry_attempts']
+            : self::DEFAULT_CONNECTOR_RETRY_ATTEMPTS;
+
+        $retryDelay = is_numeric($config['connector_retry_delay'] ?? null)
+            ? (int) $config['connector_retry_delay']
+            : self::DEFAULT_CONNECTOR_RETRY_DELAY;
+
+        $retryContext = new RetryContext($this->retryManager, $retryAttempts, $retryDelay);
+
+        $connection = $retryContext->retryOnFailure(fn () => $connector());
+
+        return new PhpRedisSentinelConnection($connection, $connector, $config, $retryContext);
     }
 
     /**
