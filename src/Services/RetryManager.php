@@ -27,6 +27,7 @@ class RetryManager
         'loading',
         'readonly',
         "can't write against a read only replica",
+        "connection timed out"
     ];
 
     /**
