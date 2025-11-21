@@ -104,7 +104,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
      * @throws ConfigurationException
      * @throws RedisException
      */
-    private function getMaster(array $config): array
+    private function getMaster(array $config): array|false
     {
         $service = $config['sentinel_service'] ?? 'mymaster';
 
