@@ -132,6 +132,37 @@ The important parts are the `tls://` protocol in `sentinel_host` as well as the 
 
 Because Redis Sentinel resolves Redis instances by IP and port, your Redis certificate needs to have the IP as SAN. Alternatively, you can set `verify_peer` and maybe also `verify_peer_name` to `false`.
 
+### Multiple Sentinel instances
+
+If your environment is composed of multiple Redis Sentinel instances, you can use the `sentinel_hosts` configuration instead of `sentinel_host` and `sentinel_port`.  
+`sentinel_hosts` is an array where each entry contains a `host` and a `port` key corresponding to a Sentinel instance.
+
+#### Example configuration using multiple Redis Sentinel instances
+
+```php
+'redis' => [
+    'client' => env('REDIS_CLIENT', 'phpredis-sentinel'),
+
+    'default' => [
+        'sentinel_hosts' => [
+            ['host' => '127.0.0.1', 'port' => 26379],
+            ['host' => '127.0.0.1', 'port' => 26380],
+            ['host' => '127.0.0.1', 'port' => 26381],
+        ],
+        'sentinel_service' => 'mymaster',
+        'sentinel_timeout' => 0,
+        'sentinel_persistent' => false,
+        'sentinel_retry_interval' => 0,
+        'sentinel_read_timeout' => 0,
+        'sentinel_username' => 'sentinel_username',
+        'sentinel_password' => 'sentinel_password',
+
+        'password' => 'password'
+        'database' => 1,
+    ]
+]
+```
+
 ### How does it work?
 
 An additional Laravel Redis driver is added (`phpredis-sentinel`), which resolves the currently declared master instance of a replication
