@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Namoshek\Redis\Sentinel\Connectors;
 
-use Exception;
 use Illuminate\Redis\Connectors\PhpRedisConnector;
 use Illuminate\Support\Arr;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
