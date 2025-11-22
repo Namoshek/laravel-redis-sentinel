@@ -157,7 +157,7 @@ If your environment is composed of multiple Redis Sentinel instances, you can us
         'sentinel_username' => 'sentinel_username',
         'sentinel_password' => 'sentinel_password',
 
-        'password' => 'password'
+        'password' => 'password',
         'database' => 1,
     ]
 ]
