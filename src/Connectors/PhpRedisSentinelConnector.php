@@ -47,11 +47,13 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
      */
     public function connect(array $config, array $options): PhpRedisSentinelConnection
     {
-        $connector = function () use ($config, $options) {
+        $formattedOptions = Arr::pull($config, 'options', []);
+
+        $connector = function () use ($config, $options, $formattedOptions) {
             return $this->createClient(array_merge(
                 $config,
                 $options,
-                Arr::pull($config, 'options', [])
+                $formattedOptions
             ));
         };
 
