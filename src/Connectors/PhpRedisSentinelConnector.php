@@ -82,7 +82,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
     {
         $master = $this->getMaster($config);
 
-        if (! $this->isValidMaster($master)) {
+        if ($master === false) {
             throw new RedisException(sprintf("No master found for service '%s'.", $config['sentinel_service'] ?? 'mymaster'));
         }
 
@@ -109,18 +109,31 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
     private function getMaster(array $config): array|false
     {
         $service = $config['sentinel_service'] ?? 'mymaster';
-
-        $exception = null;
         $hosts = $config['sentinel_hosts'] ?? [];
 
-        foreach ($hosts as $host) {
-            $hostConfig = array_merge($config, [
-                'sentinel_host' => $host['host'] ?? null,
-                'sentinel_port' => ((int) $host['port']) ?? null,
-            ]);
+        if (count($hosts) === 0 && isset($config['sentinel_host'])) {
+            $hosts = [['host' => $config['sentinel_host'], 'port' => $config['sentinel_port'] ?? 26379]];
+        }
 
+        if (count($hosts) === 0) {
+            return false;
+        }
+
+        shuffle($hosts);
+        $exception = null;
+
+        foreach ($hosts as $host) {
             try {
-                return $this->connectToSentinel($hostConfig)->master($service);
+                $sentinelConfig = array_merge($config, [
+                    'sentinel_host' => $host['host'] ?? null,
+                    'sentinel_port' => $host['port'] ?? 26379,
+                ]);
+
+                $master = $this->connectToSentinel($sentinelConfig)->master($service);
+
+                if ($this->isValidMaster($master)) {
+                    return $master;
+                }
             } catch (RedisException $e) {
                 $exception = $e;
             }
@@ -130,7 +143,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             throw $exception;
         }
 
-        return $this->connectToSentinel($config)->master($service);
+        return false;
     }
 
     /**
