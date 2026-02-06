@@ -123,6 +123,7 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             shuffle($hosts);
         }
 
+        $retryableException = null;
         $exception = null;
 
         foreach ($hosts as $host) {
@@ -139,11 +140,14 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
                 }
             } catch (RedisException $e) {
                 $exception = $e;
+                if ($retryableException === null && $this->retryManager->shouldRetry($e)) {
+                    $retryableException = $e;
+                }
             }
         }
 
         if ($exception !== null) {
-            throw $exception;
+            throw $retryableException ?? $exception;
         }
 
         return false;
