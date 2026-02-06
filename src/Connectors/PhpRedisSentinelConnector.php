@@ -119,7 +119,10 @@ class PhpRedisSentinelConnector extends PhpRedisConnector
             return false;
         }
 
-        shuffle($hosts);
+        if ($config['shuffle_hosts'] ?? true) {
+            shuffle($hosts);
+        }
+
         $exception = null;
 
         foreach ($hosts as $host) {
