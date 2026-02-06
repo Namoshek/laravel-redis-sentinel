@@ -214,6 +214,44 @@ class PhpRedisSentinelConnectorTest extends TestCase
         self::assertNotSame($clientId, spl_object_hash($connection->client()));
     }
 
+    public function test_connecting_with_multiple_sentinel_hosts_works(): void
+    {
+        $connection = $this->getRedisConnection('multi_sentinel');
+
+        self::assertTrue($connection->ping());
+    }
+
+    public function test_sentinel_hosts_rotation_skips_unavailable(): void
+    {
+        $config = $this->app['config']->get('database.redis.multi_sentinel');
+        $unavailableHost = ['host' => $config['sentinel_hosts'][0]['host'], 'port' => 26399];
+
+        array_unshift($config['sentinel_hosts'], $unavailableHost);
+        $this->app['config']->set('database.redis.sentinel_rotation', $config);
+
+        $connection = $this->getRedisConnection('sentinel_rotation');
+
+        self::assertTrue($connection->ping());
+    }
+
+    public function test_sentinel_hosts_throws_when_all_unavailable(): void
+    {
+        $config = $this->app['config']->get('database.redis.multi_sentinel');
+        $host = $config['sentinel_hosts'][0]['host'];
+        $unavailableHosts = [
+            ['host' => $host, 'port' => 26397],
+            ['host' => $host, 'port' => 26398],
+        ];
+
+        $config['sentinel_hosts'] = $unavailableHosts;
+        $this->app['config']->set('database.redis.all_unavailable', $config);
+
+        $this->expectException(RedisException::class);
+        $this->expectExceptionMessageMatches('/Reached the \(re\)connect limit of \d+ attempts\./');
+
+        $this->getRedisConnection('all_unavailable');
+    }
+
     /**
      * Extract the run_id from the server info block.
      */
