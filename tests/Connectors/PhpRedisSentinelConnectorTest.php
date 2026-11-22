@@ -7,6 +7,7 @@ namespace Namoshek\Redis\Sentinel\Tests\Connectors;
 use Illuminate\Redis\RedisManager;
 use Mockery;
 use Mockery\MockInterface;
+use Mockery\VerificationDirector;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
@@ -32,7 +33,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
     public function test_initial_connect_to_redis_with_a_failing_node(): void
     {
-        /** @var \Mockery\MockInterface $spy */
+        /** @var MockInterface $spy */
         $spy = $this->spy(RetryManager::class, fn (MockInterface $mock) => $mock->makePartial());
 
         // Retrieve the connection.
@@ -49,7 +50,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
         $this->app->forgetInstance('redis');
         $connection = $this->getRedisConnection();
 
-        /** @var \Mockery\VerificationDirector $expectation */
+        /** @var VerificationDirector $expectation */
         $expectation = $spy->shouldHaveReceived('retry');
 
         // Make we are calling the retry from the connector and not the connection.
@@ -72,7 +73,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
     public function test_retries_when_master_goes_away(): void
     {
-        /** @var \Mockery\MockInterface $spy */
+        /** @var MockInterface $spy */
         $spy = $this->spy(RetryManager::class, fn (MockInterface $mock) => $mock->makePartial());
 
         // Connect for the first time and remember the object hash of the connection.
@@ -98,7 +99,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
         $connection->get('foo');
         $connection->del('foo');
 
-        /** @var \Mockery\VerificationDirector $expectation */
+        /** @var VerificationDirector $expectation */
         $expectation = $spy->shouldHaveReceived('retry');
 
         // It should be retried at least 3 times as there is some time before

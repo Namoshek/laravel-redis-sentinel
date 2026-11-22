@@ -22,7 +22,7 @@ class PhpRedisSentinelConnection extends PhpRedisConnection
     /**
      * Create a new PhpRedis connection.
      *
-     * @param  \Redis  $client
+     * @param  Redis  $client
      */
     public function __construct(
         $client,

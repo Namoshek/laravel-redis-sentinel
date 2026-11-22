@@ -7,6 +7,10 @@ declare(strict_types=1);
 
 namespace Namoshek\Redis\Sentinel\Tests;
 
+use Illuminate\Foundation\Application;
+use Illuminate\Redis\RedisServiceProvider;
+use Namoshek\Redis\Sentinel\RedisSentinelServiceProvider;
+
 /**
  * Base for all unit tests.
  */
@@ -15,21 +19,21 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     /**
      * Returns a list of service providers required for the tests.
      *
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return string[]
      */
     protected function getPackageProviders($app): array
     {
         return [
-            \Illuminate\Redis\RedisServiceProvider::class,
-            \Namoshek\Redis\Sentinel\RedisSentinelServiceProvider::class,
+            RedisServiceProvider::class,
+            RedisSentinelServiceProvider::class,
         ];
     }
 
     /**
      * Define environment setup.
      *
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
