@@ -113,7 +113,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
     public function test_no_retries_on_normal_exception(): void
     {
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_hash($connection->client());
+        $clientId = spl_object_id($connection->client());
 
         // Perform some random actions.
         $connection->ping();
@@ -134,14 +134,14 @@ class PhpRedisSentinelConnectorTest extends TestCase
         $connection->set('foo', 'bar');
 
         // Connect a second time and compare the object hash of this and the old connection.
-        self::assertSame($clientId, spl_object_hash($connection->client()));
+        self::assertSame($clientId, spl_object_id($connection->client()));
     }
 
     public function test_when_connection_goes_away_it_is_reestablished(): void
     {
         // Connect for the first time and remember the object hash of the connection.
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_hash($connection->client());
+        $clientId = spl_object_id($connection->client());
 
         // Perform some random actions.
         $connection->ping();
@@ -160,14 +160,14 @@ class PhpRedisSentinelConnectorTest extends TestCase
         }
 
         // Connect a second time and compare the object hash of this and the old connection.
-        self::assertNotSame($clientId, spl_object_hash($connection->client()));
+        self::assertNotSame($clientId, spl_object_id($connection->client()));
     }
 
     public function test_when_connection_becomes_readonly_it_is_reestablished(): void
     {
         // Connect for the first time and remember the object hash of the connection.
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_hash($connection->client());
+        $clientId = spl_object_id($connection->client());
 
         // Perform some random actions.
         $connection->ping();
@@ -186,14 +186,14 @@ class PhpRedisSentinelConnectorTest extends TestCase
         }
 
         // Connect a second time and compare the object hash of this and the old connection.
-        self::assertNotSame($clientId, spl_object_hash($connection->client()));
+        self::assertNotSame($clientId, spl_object_id($connection->client()));
     }
 
     public function test_when_connection_becomes_readonly_it_is_reestablished2(): void
     {
         // Connect for the first time and remember the object hash of the connection.
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_hash($connection->client());
+        $clientId = spl_object_id($connection->client());
 
         // Perform some random actions.
         $connection->ping();
@@ -212,7 +212,7 @@ class PhpRedisSentinelConnectorTest extends TestCase
         }
 
         // Connect a second time and compare the object hash of this and the old connection.
-        self::assertNotSame($clientId, spl_object_hash($connection->client()));
+        self::assertNotSame($clientId, spl_object_id($connection->client()));
     }
 
     /**
