@@ -180,6 +180,9 @@ which can be used to start one by running `sh start-redis-cluster.sh`.
 The script requires that Redis is installed on your machine. To install Redis on Ubuntu or Debian,
 you can use `sudo apt update && sudo apt install redis-server`. For other operating systems, please see [redis.io](https://redis.io/).
 
+The integration tests deliberately crash Redis nodes, so use a dedicated local test cluster rather than instances containing important data.
+Wait for the cluster to finish starting before running `composer test`, and do not run the integration tests in parallel.
+
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

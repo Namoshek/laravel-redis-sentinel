@@ -7,7 +7,6 @@ namespace Namoshek\Redis\Sentinel\Tests\Connectors;
 use Illuminate\Redis\RedisManager;
 use Mockery;
 use Mockery\MockInterface;
-use Mockery\VerificationDirector;
 use Namoshek\Redis\Sentinel\Connections\PhpRedisSentinelConnection;
 use Namoshek\Redis\Sentinel\Connectors\PhpRedisSentinelConnector;
 use Namoshek\Redis\Sentinel\Exceptions\RetryRedisException;
@@ -15,13 +14,37 @@ use Namoshek\Redis\Sentinel\Services\RetryManager;
 use Namoshek\Redis\Sentinel\Tests\TestCase;
 use Redis;
 use RedisException;
-use ReflectionFunction;
 
 /**
  * Ensures that the {@see PhpRedisSentinelConnector} functions properly.
  */
 class PhpRedisSentinelConnectorTest extends TestCase
 {
+    public function test_initial_connection_retries_after_a_connection_failure(): void
+    {
+        $client = new Redis;
+        $attempts = 0;
+        $connector = Mockery::mock(PhpRedisSentinelConnector::class, [new RetryManager])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+        $connector->shouldReceive('createClient')
+            ->twice()
+            ->andReturnUsing(function () use (&$attempts, $client) {
+                if (++$attempts === 1) {
+                    throw new RedisException('connection refused');
+                }
+
+                return $client;
+            });
+
+        $connection = $connector->connect([
+            'connector_retry_attempts' => 1,
+            'connector_retry_delay' => 0,
+        ], []);
+
+        self::assertSame($client, $connection->client());
+    }
+
     public function test_connecting_to_redis_through_sentinel_without_password_works(): void
     {
         $connection = $this->getRedisConnection();
@@ -33,11 +56,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
     public function test_initial_connect_to_redis_with_a_failing_node(): void
     {
-        /** @var MockInterface $spy */
-        $spy = $this->spy(RetryManager::class, fn (MockInterface $mock) => $mock->makePartial());
-
         // Retrieve the connection.
         $connection = $this->getRedisConnection();
+        $serverId = $this->extractServerId($connection->executeRaw(['INFO', 'server']));
+        self::assertNotNull($serverId);
 
         // Force the shutdown of a node, but avoid aborting the test case.
         try {
@@ -50,35 +72,20 @@ class PhpRedisSentinelConnectorTest extends TestCase
         $this->app->forgetInstance('redis');
         $connection = $this->getRedisConnection();
 
-        /** @var VerificationDirector $expectation */
-        $expectation = $spy->shouldHaveReceived('retry');
-
-        // Make we are calling the retry from the connector and not the connection.
-        $expectation->with(Mockery::on(function ($arg) {
-            if (! is_callable($arg)) {
-                return false;
-            }
-
-            $callableClass = (new ReflectionFunction($arg))
-                ->getClosureScopeClass()
-                ?->getName();
-
-            return $callableClass === PhpRedisSentinelConnector::class;
-        }));
-
-        // It should be retried at least 3 times as there is some time before
-        // sentinel marks the node as down and kicks in the failover.
-        $expectation->between(3, PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_ATTEMPTS);
+        $newServerId = $this->extractServerId($connection->executeRaw(['INFO', 'server']));
+        self::assertNotNull($newServerId);
+        self::assertNotSame($serverId, $newServerId);
     }
 
-    public function test_retries_when_master_goes_away(): void
+    public function test_reconnects_when_master_goes_away(): void
     {
         /** @var MockInterface $spy */
         $spy = $this->spy(RetryManager::class, fn (MockInterface $mock) => $mock->makePartial());
 
-        // Connect for the first time and remember the object hash of the connection.
+        // Connect for the first time and remember the server.
         $connection = $this->getRedisConnection();
         $serverId = $this->extractServerId($connection->executeRaw(['INFO', 'server']));
+        self::assertNotNull($serverId);
 
         // Perform some random actions.
         $connection->set('foo', 'bar');
@@ -99,21 +106,16 @@ class PhpRedisSentinelConnectorTest extends TestCase
         $connection->get('foo');
         $connection->del('foo');
 
-        /** @var VerificationDirector $expectation */
-        $expectation = $spy->shouldHaveReceived('retry');
-
-        // It should be retried at least 3 times as there is some time before
-        // sentinel marks the node as down and kicks in the failover.
-        $expectation->between(3, PhpRedisSentinelConnector::DEFAULT_CONNECTOR_RETRY_ATTEMPTS);
-
         // Check the server id is updated.
-        self::assertNotSame($serverId, $this->extractServerId($connection->executeRaw(['INFO', 'server'])));
+        $newServerId = $this->extractServerId($connection->executeRaw(['INFO', 'server']));
+        self::assertNotNull($newServerId);
+        self::assertNotSame($serverId, $newServerId);
     }
 
     public function test_no_retries_on_normal_exception(): void
     {
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_id($connection->client());
+        $client = $connection->client();
 
         // Perform some random actions.
         $connection->ping();
@@ -124,8 +126,10 @@ class PhpRedisSentinelConnectorTest extends TestCase
         // Force an exception, but avoid aborting the test case.
         try {
             $connection->transaction(fn (Redis $redis) => throw new RedisException('this exception should not be retried.'));
+            self::fail('Expected the original exception.');
         } catch (RedisException $e) {
             self::assertNotInstanceOf(RetryRedisException::class, $e);
+            self::assertSame('this exception should not be retried.', $e->getMessage());
 
             // We need to discard the ->multi() in the transaction, otherwise other tests may fail.
             $connection->client()->discard();
@@ -133,15 +137,15 @@ class PhpRedisSentinelConnectorTest extends TestCase
 
         $connection->set('foo', 'bar');
 
-        // Connect a second time and compare the object hash of this and the old connection.
-        self::assertSame($clientId, spl_object_id($connection->client()));
+        // Check that the client was not replaced.
+        self::assertSame($client, $connection->client());
     }
 
     public function test_when_connection_goes_away_it_is_reestablished(): void
     {
-        // Connect for the first time and remember the object hash of the connection.
+        // Keep the original client alive for the identity comparison.
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_id($connection->client());
+        $client = $connection->client();
 
         // Perform some random actions.
         $connection->ping();
@@ -155,19 +159,20 @@ class PhpRedisSentinelConnectorTest extends TestCase
                 fn (Redis $redis) => throw new RedisException('went away'),
                 retryAttempts: 0,
             );
-        } catch (RedisException) {
-            // Ignored on purpose.
+            self::fail('Expected a retry exception.');
+        } catch (RetryRedisException $e) {
+            self::assertSame('went away', $e->getPrevious()?->getMessage());
         }
 
-        // Connect a second time and compare the object hash of this and the old connection.
-        self::assertNotSame($clientId, spl_object_id($connection->client()));
+        // Check that the client was replaced.
+        self::assertNotSame($client, $connection->client());
     }
 
     public function test_when_connection_becomes_readonly_it_is_reestablished(): void
     {
-        // Connect for the first time and remember the object hash of the connection.
+        // Keep the original client alive for the identity comparison.
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_id($connection->client());
+        $client = $connection->client();
 
         // Perform some random actions.
         $connection->ping();
@@ -181,19 +186,20 @@ class PhpRedisSentinelConnectorTest extends TestCase
                 fn (Redis $redis) => throw new RedisException('READONLY'),
                 retryAttempts: 0,
             );
-        } catch (RedisException) {
-            // Ignored on purpose.
+            self::fail('Expected a retry exception.');
+        } catch (RetryRedisException $e) {
+            self::assertSame('READONLY', $e->getPrevious()?->getMessage());
         }
 
-        // Connect a second time and compare the object hash of this and the old connection.
-        self::assertNotSame($clientId, spl_object_id($connection->client()));
+        // Check that the client was replaced.
+        self::assertNotSame($client, $connection->client());
     }
 
     public function test_when_connection_becomes_readonly_it_is_reestablished2(): void
     {
-        // Connect for the first time and remember the object hash of the connection.
+        // Keep the original client alive for the identity comparison.
         $connection = $this->getRedisConnection();
-        $clientId = spl_object_id($connection->client());
+        $client = $connection->client();
 
         // Perform some random actions.
         $connection->ping();
@@ -207,12 +213,13 @@ class PhpRedisSentinelConnectorTest extends TestCase
                 fn (Redis $redis) => throw new RedisException("You can't write against a read only replica"),
                 retryAttempts: 0,
             );
-        } catch (RedisException) {
-            // Ignored on purpose.
+            self::fail('Expected a retry exception.');
+        } catch (RetryRedisException $e) {
+            self::assertSame("You can't write against a read only replica", $e->getPrevious()?->getMessage());
         }
 
-        // Connect a second time and compare the object hash of this and the old connection.
-        self::assertNotSame($clientId, spl_object_id($connection->client()));
+        // Check that the client was replaced.
+        self::assertNotSame($client, $connection->client());
     }
 
     /**
