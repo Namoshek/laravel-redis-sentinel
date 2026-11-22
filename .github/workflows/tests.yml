@@ -17,11 +17,11 @@ jobs:
       matrix:
         operating-system: [ubuntu-latest]
         php-version: ["8.2", "8.3", "8.4", "8.5", "8.6"]
-        redis-version: ["7.4.6", "8.0.20"]
+        redis-version: ["7.4.12", "8.0.6"]
         include:
           - operating-system: "ubuntu-latest"
             php-version: "8.6"
-            redis-version: "8.0.20"
+            redis-version: "8.0.6"
             run-sonarqube-analysis: true
 
     steps:
